@@ -27,6 +27,7 @@ import (
 	"github.com/fatedier/golib/crypto"
 	"github.com/fatedier/golib/errors"
 
+	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/auth"
 	"github.com/fatedier/frp/pkg/config"
 	"github.com/fatedier/frp/pkg/consts"
@@ -39,7 +40,6 @@ import (
 	"github.com/fatedier/frp/server/controller"
 	"github.com/fatedier/frp/server/metrics"
 	"github.com/fatedier/frp/server/proxy"
-	"github.com/fatedier/frp/pkg/api"
 )
 
 type ControlManager struct {
@@ -520,7 +520,6 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 			return remoteAddr, fmt.Errorf("invalid proxy configuration")
 		}
 	}
-
 
 	// Load configures from NewProxy message and check.
 	pxyConf, err = config.NewProxyConfFromMsg(pxyMsg, ctl.serverCfg)

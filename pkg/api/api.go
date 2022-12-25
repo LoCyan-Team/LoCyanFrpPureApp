@@ -11,10 +11,12 @@ import (
 	"github.com/fatedier/frp/pkg/msg"
 )
 
+// Service sakurafrp api servie
 type Service struct {
 	Host url.URL
 }
 
+// NewService crate sakurafrp api servie
 func NewService(host string) (s *Service, err error) {
 	u, err := url.Parse(host)
 	if err != nil {
@@ -98,8 +100,8 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 
 	// Headers
 	values.Set("locations", string(locations))
-	values.Set("http_user", pMsg.HttpUser)
-	values.Set("http_pwd", pMsg.HttpPwd)
+	values.Set("http_user", pMsg.HTTPUser)
+	values.Set("http_pwd", pMsg.HTTPPwd)
 	values.Set("host_header_rewrite", pMsg.HostHeaderRewrite)
 	values.Set("headers", string(headers))
 
@@ -142,21 +144,65 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 	return true, nil
 }
 
+// GetProxyLimit 获取隧道限速信息
+func (s Service) GetProxyLimit(user string, timestamp int64, stk string) (inLimit, outLimit uint64, err error) {
+	// 这部分就照之前的搬过去了，能跑就行x
+	values := url.Values{}
+	values.Set("action", "getlimit")
+	values.Set("user", user)
+	values.Set("timestamp", fmt.Sprintf("%d", timestamp))
+	values.Set("apitoken", stk)
+	s.Host.RawQuery = values.Encode()
+	defer func(u *url.URL) {
+		u.RawQuery = ""
+	}(&s.Host)
+	resp, err := http.Get(s.Host.String())
+	if err != nil {
+		return 0, 0, err
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	er := &ErrHTTPStatus{}
+	if err = json.Unmarshal(body, er); err != nil {
+		return 0, 0, err
+	}
+	if er.Status != 200 {
+		return 0, 0, er
+	}
+
+	response := &ResponseGetLimit{}
+	if err = json.Unmarshal(body, response); err != nil {
+		return 0, 0, err
+	}
+
+	// 这里直接返回 uint64 应该问题不大
+	return response.MaxIn, response.MaxOut, nil
+}
+
 func BoolToString(val bool) (str string) {
 	if val {
 		return "true"
-	} else {
-		return "false"
 	}
+	return "false"
+
 }
 
 type ErrHTTPStatus struct {
 	Status int    `json:"status"`
-	Text   string `json:"massage"`
+	Text   string `json:"message"`
 }
 
 func (e ErrHTTPStatus) Error() string {
-	return fmt.Sprintf("%s", e.Text)
+	return fmt.Sprintf("SakuraFrp API Error (Status: %d, Text: %s)", e.Status, e.Text)
+}
+
+type ResponseGetLimit struct {
+	MaxIn  uint64 `json:"max-in"`
+	MaxOut uint64 `json:"max-out"`
 }
 
 type ResponseCheckToken struct {
