@@ -25,6 +25,7 @@ import (
 	"sort"
 	"strconv"
 	"time"
+	"regexp"
 
 	"github.com/fatedier/golib/net/mux"
 	fmux "github.com/hashicorp/yamux"
@@ -40,6 +41,7 @@ import (
 	"github.com/fatedier/frp/pkg/transport"
 	"github.com/fatedier/frp/pkg/util/log"
 	frpNet "github.com/fatedier/frp/pkg/util/net"
+	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/util/tcpmux"
 	"github.com/fatedier/frp/pkg/util/util"
 	"github.com/fatedier/frp/pkg/util/version"
@@ -510,6 +512,46 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 	if err = svr.authVerifier.VerifyLogin(loginMsg); err != nil {
 		return
 	}
+
+	var (
+		inLimit  uint64
+		outLimit uint64
+	)
+
+	if svr.cfg.EnableApi {
+
+		nowTime := time.Now().Unix()
+
+		s, err := api.NewService(svr.cfg.ApiBaseUrl)
+		if err != nil {
+			return err
+		}
+
+		r := regexp.MustCompile(`^[A-Za-z0-9]{1,64}$`)
+		mm := r.FindAllStringSubmatch(loginMsg.User, -1)
+
+		if len(mm) < 1 {
+			return fmt.Errorf("invalid username")
+		}
+
+		// Connect to API server and verify the user.
+		valid, err := s.CheckToken(loginMsg.User, loginMsg.PrivilegeKey, nowTime, svr.cfg.ApiToken)
+
+		if err != nil {
+			return err
+		}
+
+		if !valid {
+			return fmt.Errorf("authorization failed")
+		}
+
+		inLimit, outLimit, err = s.GetProxyLimit(loginMsg.User, nowTime, svr.cfg.ApiToken)
+		if err != nil {
+			return err
+		}
+		ctlConn.Debug("%s client speed limit: %dKB/s (Inbound) / %dKB/s (Outbound)", loginMsg.User, inLimit, outLimit)
+	}
+
 
 	ctl := NewControl(ctx, svr.rc, svr.pxyManager, svr.pluginManager, svr.authVerifier, ctlConn, loginMsg, svr.cfg)
 	if oldCtl := svr.ctlManager.Add(loginMsg.RunID, ctl); oldCtl != nil {

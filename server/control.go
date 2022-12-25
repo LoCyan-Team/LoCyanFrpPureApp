@@ -39,6 +39,7 @@ import (
 	"github.com/fatedier/frp/server/controller"
 	"github.com/fatedier/frp/server/metrics"
 	"github.com/fatedier/frp/server/proxy"
+	"github.com/fatedier/frp/pkg/api"
 )
 
 type ControlManager struct {
@@ -499,6 +500,28 @@ func (ctl *Control) manager() {
 
 func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err error) {
 	var pxyConf config.ProxyConf
+
+	s, err := api.NewService(ctl.serverCfg.ApiBaseUrl)
+
+	if err != nil {
+		return remoteAddr, err
+	}
+
+	if ctl.serverCfg.EnableApi {
+
+		nowTime := time.Now().Unix()
+		ok, err := s.CheckProxy(ctl.loginMsg.User, pxyMsg, nowTime, ctl.serverCfg.ApiToken)
+
+		if err != nil {
+			return remoteAddr, err
+		}
+
+		if !ok {
+			return remoteAddr, fmt.Errorf("invalid proxy configuration")
+		}
+	}
+
+
 	// Load configures from NewProxy message and check.
 	pxyConf, err = config.NewProxyConfFromMsg(pxyMsg, ctl.serverCfg)
 	if err != nil {

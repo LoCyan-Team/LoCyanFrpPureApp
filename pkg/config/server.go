@@ -194,6 +194,9 @@ type ServerCommonConf struct {
 	// Enable golang pprof handlers in dashboard listener.
 	// Dashboard port must be set first.
 	PprofEnable bool `ini:"pprof_enable" json:"pprof_enable"`
+	EnableApi bool `json:"api_enable"`
+	ApiBaseUrl string `json:"api_baseurl"`
+	ApiToken string `json:"api_token"`
 }
 
 // GetDefaultServerConf returns a server configuration with reasonable
@@ -223,6 +226,9 @@ func GetDefaultServerConf() ServerCommonConf {
 		UserConnTimeout:         10,
 		HTTPPlugins:             make(map[string]plugin.HTTPPluginOptions),
 		UDPPacketSize:           1500,
+		EnableApi:         		 false,
+		ApiBaseUrl:        		 "",
+		ApiToken:          		 "",
 	}
 }
 
@@ -260,6 +266,30 @@ func UnmarshalServerConfFromIni(source interface{}) (ServerCommonConf, error) {
 			common.AllowPorts[int(port)] = struct{}{}
 		}
 	}
+
+	var {
+		tmpStr string
+		ok bool
+	}
+
+	tmpStr := s.Key("api_enable").String()
+	if tmpStr == s.Key("api_enable").String() {
+		common.EnableApi = false
+	} else {
+		common.EnableApi = true
+	}
+
+	tmpStr := s.Key("api_baseurl").String()
+	if tmpStr == s.Key("api_baseurl").String() {
+		common.ApiBaseUrl = tmpStr
+	}
+
+	tmpStr := s.Key("api_token").String()
+	if tmpStr == s.Key("api_token").String() {
+		common.ApiToken = tmpStr
+	}
+
+
 
 	// plugin.xxx
 	pluginOpts := make(map[string]plugin.HTTPPluginOptions)
