@@ -272,7 +272,7 @@ func UnmarshalServerConfFromIni(source interface{}) (ServerCommonConf, error) {
 	)
 
 	tmpStr = s.Key("api_enable").String()
-	if tmpStr == s.Key("api_enable").String() {
+	if tmpStr == "false" {
 		common.EnableApi = false
 	} else {
 		common.EnableApi = true
