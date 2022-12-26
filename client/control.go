@@ -169,7 +169,7 @@ func (ctl *Control) HandleNewProxyResp(inMsg *msg.NewProxyResp) {
 	if err != nil {
 		xl.Warn("[%s] start error: %v", inMsg.ProxyName, err)
 	} else {
-		xl.Info("[%s] start proxy success", inMsg.ProxyName)
+		xl.Info("[%s] 映射启动成功, 感谢您使用LCF!", inMsg.ProxyName)
 	}
 }
 
