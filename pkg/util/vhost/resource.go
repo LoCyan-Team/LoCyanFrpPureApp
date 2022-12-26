@@ -28,25 +28,31 @@ var NotFoundPagePath = ""
 
 const (
 	NotFound = `<!DOCTYPE html>
-<html>
-<head>
-<title>Not Found</title>
-<style>
-    body {
-        width: 35em;
-        margin: 0 auto;
-        font-family: Tahoma, Verdana, Arial, sans-serif;
-    }
-</style>
-</head>
-<body>
-<h1>The page you requested was not found.</h1>
-<p>Sorry, the page you are looking for is currently unavailable.<br/>
-Please try again later.</p>
-<p>The server is powered by <a href="https://github.com/fatedier/frp">frp</a>.</p>
-<p><em>Faithfully yours, frp.</em></p>
-</body>
-</html>
+	<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>无法找到你的请求的网站！</title>
+		<meta name="description" content="无法找到你的请求的网站!,请确定FRP服务已启动!">
+		<link rel="icon" type="image/ico" href="https://tx.hk47.cc/favicon.ico">
+		<link rel="stylesheet" href="https://tx.hk47.cc/404-bootstrap.css">
+		<link rel="stylesheet" href="https://tx.hk47.cc/404-style.css">
+	</head>
+	<body>
+		<div id="main" class="container">
+			<div class="row my-card justify-content-center">
+				<div class="col-lg-4 photo-bg"></div>
+				<div class="col-lg-8 card">
+					<h1><b>对不起, 无法找到你的请求的网站！</b></h1><br>
+					<p>找不到您请求的网站，请确定FRP服务已经正常启动! 这个页面来自于 <a href="https://www.locyanfrp.cn/">LoCyanFrp</a></p>
+					<p>We can't find the website you requested, please check that your FRP service available</p>
+					<p>This page comes from <a href="https://www.locyanfrp.cn/">LoCyanFrp</a></p>
+					<hr><script src="https://tenapi.cn/yiyan/?format=js"></script><hr><br>
+				</div>
+			</div>
+		</div>
+	<script src="https://tx.hk47.cc/sakura.js"></script>
+	</body>
+	</html>
 `
 )
 
