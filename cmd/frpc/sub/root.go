@@ -96,13 +96,14 @@ func RegisterCommonFlags(cmd *cobra.Command) {
 
 var rootCmd = &cobra.Command{
 	Use:   "frpc",
-	Short: "frpc is the client of frp (https://github.com/fatedier/frp)",
+	Short: "LoCyan Frp Client",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if showVersion {
 			fmt.Println(version.Full())
 			return nil
 		}
 
+		fmt.Println("欢迎使用LoCyanFrp映射客户端")
 		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
 		// Note that it's only designed for testing. It's not guaranteed to be stable.
 		if cfgDir != "" {

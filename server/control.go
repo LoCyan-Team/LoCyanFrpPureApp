@@ -32,6 +32,7 @@ import (
 	"github.com/fatedier/frp/pkg/config"
 	"github.com/fatedier/frp/pkg/consts"
 	frpErr "github.com/fatedier/frp/pkg/errors"
+	"github.com/fatedier/frp/pkg/limit"
 	"github.com/fatedier/frp/pkg/msg"
 	plugin "github.com/fatedier/frp/pkg/plugin/server"
 	"github.com/fatedier/frp/pkg/util/util"
@@ -141,8 +142,10 @@ type Control struct {
 	// Server configuration information
 	serverCfg config.ServerCommonConf
 
-	xl  *xlog.Logger
-	ctx context.Context
+	xl       *xlog.Logger
+	ctx      context.Context
+	inLimit  uint64
+	outLimit uint64
 }
 
 func NewControl(
@@ -503,6 +506,8 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 
 	s, err := api.NewService(ctl.serverCfg.ApiBaseUrl)
 
+	var workConn proxy.GetWorkConnFn = ctl.GetWorkConn
+
 	if err != nil {
 		return remoteAddr, err
 	}
@@ -519,12 +524,22 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		if !ok {
 			return remoteAddr, fmt.Errorf("invalid proxy configuration")
 		}
+
+		workConn = func() (net.Conn, error) {
+			fconn, err := ctl.GetWorkConn()
+			if err != nil {
+				return nil, err
+			}
+			ctl.xl.Debug("client speed limit: %dKB/s (Inbound) / %dKB/s (Outbound)", ctl.inLimit, ctl.outLimit)
+			return limit.NewLimitConn(ctl.inLimit, ctl.outLimit, fconn), nil
+		}
+
 	}
 
 	// Load configures from NewProxy message and check.
 	pxyConf, err = config.NewProxyConfFromMsg(pxyMsg, ctl.serverCfg)
 	if err != nil {
-		return
+		return remoteAddr, err
 	}
 
 	// User info
@@ -536,7 +551,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 
 	// NewProxy will return a interface Proxy.
 	// In fact it create different proxies by different proxy type, we just call run() here.
-	pxy, err := proxy.NewProxy(ctl.ctx, userInfo, ctl.rc, ctl.poolCount, ctl.GetWorkConn, pxyConf, ctl.serverCfg)
+	pxy, err := proxy.NewProxy(ctl.ctx, userInfo, ctl.rc, ctl.poolCount, workConn, pxyConf, ctl.serverCfg)
 	if err != nil {
 		return remoteAddr, err
 	}

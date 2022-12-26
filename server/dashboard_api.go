@@ -333,3 +333,31 @@ func (svr *Service) APIProxyTraffic(w http.ResponseWriter, r *http.Request) {
 	buf, _ := json.Marshal(&trafficResp)
 	res.Msg = string(buf)
 }
+
+type CloseUserResp struct {
+	Status int    `json:"status"`
+	Msg    string `json:"message"`
+}
+
+func (svr *Service) APICloseClient(w http.ResponseWriter, r *http.Request) {
+	var (
+		buf  []byte
+		resp = CloseUserResp{}
+	)
+	params := mux.Vars(r)
+	user := params["user"]
+	defer func() {
+		log.Info("Http response [/api/client/close/{user}]: code [%d]", resp.Status)
+	}()
+	log.Info("Http request: [/api/client/close/{user}] %#v", user)
+	err := svr.CloseUser(user)
+	if err != nil {
+		resp.Status = 404
+		resp.Msg = err.Error()
+	} else {
+		resp.Status = 200
+		resp.Msg = "OK"
+	}
+	buf, _ = json.Marshal(&resp)
+	w.Write(buf)
+}

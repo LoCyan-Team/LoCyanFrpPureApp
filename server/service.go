@@ -489,10 +489,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 	// If client's RunID is empty, it's a new client, we just create a new controller.
 	// Otherwise, we check if there is one controller has the same run id. If so, we release previous controller and start new one.
 	if loginMsg.RunID == "" {
-		loginMsg.RunID, err = util.RandID()
-		if err != nil {
-			return
-		}
+		loginMsg.RunID = loginMsg.User
 	}
 
 	ctx := frpNet.NewContextFromConn(ctlConn)
@@ -606,4 +603,13 @@ func (svr *Service) RegisterWorkConn(workConn net.Conn, newMsg *msg.NewWorkConn)
 func (svr *Service) RegisterVisitorConn(visitorConn net.Conn, newMsg *msg.NewVisitorConn) error {
 	return svr.rc.VisitorManager.NewConn(newMsg.ProxyName, visitorConn, newMsg.Timestamp, newMsg.SignKey,
 		newMsg.UseEncryption, newMsg.UseCompression)
+}
+
+func (svr *Service) CloseUser(user string) error {
+	ctl, ok := svr.ctlManager.GetByID(user)
+	if !ok {
+		return fmt.Errorf("user not login")
+	}
+	ctl.allShutdown.Start()
+	return nil
 }

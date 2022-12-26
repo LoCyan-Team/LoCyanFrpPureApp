@@ -197,7 +197,7 @@ type ErrHTTPStatus struct {
 }
 
 func (e ErrHTTPStatus) Error() string {
-	return fmt.Sprintf("SakuraFrp API Error (Status: %d, Text: %s)", e.Status, e.Text)
+	return fmt.Sprintf("LoCyanFrp API Error (Status: %d, Text: %s)", e.Status, e.Text)
 }
 
 type ResponseGetLimit struct {

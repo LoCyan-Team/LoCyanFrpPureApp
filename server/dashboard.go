@@ -38,6 +38,12 @@ func (svr *Service) RunDashboardServer(address string) (err error) {
 	router := mux.NewRouter()
 	router.HandleFunc("/healthz", svr.Healthz)
 
+	// api, see dashboard_api.go
+	router.HandleFunc("/api/serverinfo", svr.APIServerInfo).Methods("GET")
+	router.HandleFunc("/api/proxy/{type}", svr.APIProxyByType).Methods("GET")
+	router.HandleFunc("/api/proxy/{type}/{name}", svr.APIProxyByTypeAndName).Methods("GET")
+	router.HandleFunc("/api/traffic/{name}", svr.APIProxyTraffic).Methods("GET")
+	router.HandleFunc("/api/client/close/{user}", svr.APICloseClient).Methods("GET")
 	// debug
 	if svr.cfg.PprofEnable {
 		router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)

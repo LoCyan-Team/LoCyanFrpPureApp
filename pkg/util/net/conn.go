@@ -27,6 +27,10 @@ import (
 	"github.com/fatedier/frp/pkg/util/xlog"
 )
 
+type Conn interface {
+	net.Conn
+}
+
 type ContextGetter interface {
 	Context() context.Context
 }
