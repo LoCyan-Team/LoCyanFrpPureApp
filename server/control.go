@@ -157,6 +157,8 @@ func NewControl(
 	ctlConn net.Conn,
 	loginMsg *msg.Login,
 	serverCfg config.ServerCommonConf,
+	inLimit uint64,
+	outLimit uint64,
 ) *Control {
 	poolCount := loginMsg.PoolCount
 	if poolCount > int(serverCfg.MaxPoolCount) {
@@ -185,6 +187,8 @@ func NewControl(
 		serverCfg:       serverCfg,
 		xl:              xlog.FromContextSafe(ctx),
 		ctx:             ctx,
+		inLimit:         inLimit,  //rate.NewLimiter(rate.Limit(inLimit*limit.KB), int(inLimit*limit.KB)),
+		outLimit:        outLimit, //rate.NewLimiter(rate.Limit(outLimit*limit.KB), int(outLimit*limit.KB)),
 	}
 }
 
