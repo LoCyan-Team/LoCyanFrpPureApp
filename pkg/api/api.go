@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -39,9 +40,9 @@ func (s Service) CheckToken(user string, token string, timestamp int64, stk stri
 	}(&s.Host)
 
 	tr := &http.Transport{
-        TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
-    }
-    client := &http.Client{Transport: tr}
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
 	if err != nil {
@@ -127,9 +128,9 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 	}(&s.Host)
 
 	tr := &http.Transport{
-        TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
-    }
-    client := &http.Client{Transport: tr}
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
 	if err != nil {
@@ -170,9 +171,9 @@ func (s Service) GetProxyLimit(user string, timestamp int64, stk string) (inLimi
 	}(&s.Host)
 
 	tr := &http.Transport{
-        TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
-    }
-    client := &http.Client{Transport: tr}
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
 	if err != nil {
