@@ -37,7 +37,13 @@ func (s Service) CheckToken(user string, token string, timestamp int64, stk stri
 	defer func(u *url.URL) {
 		u.RawQuery = ""
 	}(&s.Host)
-	resp, err := http.Get(s.Host.String())
+
+	tr := &http.Transport{
+        TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
+    }
+    client := &http.Client{Transport: tr}
+
+	resp, err := client.Get(s.Host.String())
 	if err != nil {
 		return false, err
 	}
@@ -119,7 +125,13 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 	defer func(u *url.URL) {
 		u.RawQuery = ""
 	}(&s.Host)
-	resp, err := http.Get(s.Host.String())
+
+	tr := &http.Transport{
+        TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
+    }
+    client := &http.Client{Transport: tr}
+
+	resp, err := client.Get(s.Host.String())
 	if err != nil {
 		return false, err
 	}
@@ -156,7 +168,13 @@ func (s Service) GetProxyLimit(user string, timestamp int64, stk string) (inLimi
 	defer func(u *url.URL) {
 		u.RawQuery = ""
 	}(&s.Host)
-	resp, err := http.Get(s.Host.String())
+
+	tr := &http.Transport{
+        TLSClientConfig:    &tls.Config{InsecureSkipVerify: true},
+    }
+    client := &http.Client{Transport: tr}
+
+	resp, err := client.Get(s.Host.String())
 	if err != nil {
 		return 0, 0, err
 	}
