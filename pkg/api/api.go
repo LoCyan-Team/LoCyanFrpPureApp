@@ -66,7 +66,7 @@ func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err er
 	if !response.Success {
 		return "", ErrCheckTokenFail{response.Message}
 	}
-	return ResGetCfg.Cfg, nil
+	return response.Cfg, nil
 }
 
 // CheckToken 校验客户端 token

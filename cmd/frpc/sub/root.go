@@ -45,6 +45,8 @@ var (
 	cfgFile     string
 	cfgDir      string
 	showVersion bool
+	cfgToken	string
+	cfgProxyid	string
 
 	serverAddr      string
 	user            string
@@ -134,29 +136,31 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		if cfgToken != "" | cfgProxyid != "" {
-			fmt.Printf("Getting Config File from LoCyanFrp API...")
-			s, err := api.NewService("https://www.locyanfrp.cn/api/")
-			cfg, err := s.EZStartGetCfg(cfgToken, cfgProxyid)
-			if err != nil {
-				fmt.Printf("Get Config File Faild, Please Check your args")
-			}
-			file, err := os.OpenFile("./frpc.ini", os.O_RDWR, 0777)
-			if err != nil {
-				fmt.Println("open file failed,err:",err)
-			}
-			defer file.Close()
-			str := cfg
-			file.WriteString(str) //直接写入字符串数据
+		if cfgToken != "" {
+			if cfgProxyid != "" {
+				fmt.Printf("Getting Config File from LoCyanFrp API...\n")
+				s, err := api.NewService("https://www.locyanfrp.cn/api/")
+				cfg, err := s.EZStartGetCfg(cfgToken, cfgProxyid)
+				if err != nil {
+					fmt.Printf("Get Config File Faild, Please Check your args\n")
+				}
+				file, err := os.OpenFile("./frpc.ini", os.O_RDWR, 0777)
+				if err != nil {
+					fmt.Println("open file failed,err:",err)
+				}
+				defer file.Close()
+				str := cfg
+				file.WriteString(str) //直接写入字符串数据
 
-			// 内容写入后直接启动
-			err := runClient(cfgFile)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
+				// 内容写入后直接启动
+				err2 := runClient(cfgFile)
+				if err2 != nil {
+					fmt.Println(err2)
+					os.Exit(1)
+				}
+				// 结束ExecuteCmd
+				return nil
 			}
-			// 结束ExecuteCmd
-			return nil
 		}
 
 		// Do not show command usage here.
