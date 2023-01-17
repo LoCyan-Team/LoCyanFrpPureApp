@@ -27,12 +27,11 @@ func NewService(host string) (s *Service, err error) {
 }
 
 // 简单启动获取Cfg
-func (s Service) EZStartGetCfg(token string, proxyid string) {
+func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err error){
 	values := url.Values{}
 	values.Set("action", "getcfg")
 	values.Set("token", token)
 	values.Set("id", proxyid)
-	values.Set("apitoken", stk)
 	// Encode 请求参数
 	s.Host.RawQuery = values.Encode()
 	defer func(u *url.URL) {
@@ -47,10 +46,10 @@ func (s Service) EZStartGetCfg(token string, proxyid string) {
 
 	resp, err := client.Get(s.Host.String())
 	if err != nil {
-		return false, err
+		return "", err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return false, ErrHTTPStatus{
+		return "", ErrHTTPStatus{
 			Status: resp.StatusCode,
 			Text:   resp.Status,
 		}
@@ -58,14 +57,14 @@ func (s Service) EZStartGetCfg(token string, proxyid string) {
 	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return false, err
+		return "", err
 	}
 	response := ResGetCfg{}
 	if err = json.Unmarshal(body, &response); err != nil {
-		return false, err
+		return "", err
 	}
 	if !response.Success {
-		return false, ErrCheckTokenFail{response.Message}
+		return "", ErrCheckTokenFail{response.Message}
 	}
 	return ResGetCfg.Cfg, nil
 }
