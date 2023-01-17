@@ -33,6 +33,7 @@ import (
 	"github.com/fatedier/frp/pkg/config"
 	"github.com/fatedier/frp/pkg/util/log"
 	"github.com/fatedier/frp/pkg/util/version"
+	"github.com/fatedier/frp/pkg/api"
 )
 
 const (
@@ -80,6 +81,8 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "./frpc.ini", "config file of frpc")
 	rootCmd.PersistentFlags().StringVarP(&cfgDir, "config_dir", "", "", "config directory, run one frpc service for each file in config directory")
 	rootCmd.PersistentFlags().BoolVarP(&showVersion, "version", "v", false, "version of frpc")
+	rootCmd.PersistentFlags().StringVarP(&cfgToken, "token", "u", "", "The Token of LoCyanFrp")
+	rootCmd.PersistentFlags().StringVarP(&cfgProxyid, "id", "p", "", "The ProxyID of LoCyanFrp")
 }
 
 func RegisterCommonFlags(cmd *cobra.Command) {
@@ -106,6 +109,7 @@ var rootCmd = &cobra.Command{
 		fmt.Println("欢迎使用LoCyanFrp映射客户端")
 		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
 		// Note that it's only designed for testing. It's not guaranteed to be stable.
+
 		if cfgDir != "" {
 			var wg sync.WaitGroup
 			_ = filepath.WalkDir(cfgDir, func(path string, d fs.DirEntry, err error) error {
@@ -127,6 +131,31 @@ var rootCmd = &cobra.Command{
 				return nil
 			})
 			wg.Wait()
+			return nil
+		}
+
+		if cfgToken != "" | cfgProxyid != "" {
+			fmt.Printf("Getting Config File from LoCyanFrp API...")
+			s, err := api.NewService("https://www.locyanfrp.cn/api/")
+			cfg, err := s.EZStartGetCfg(cfgToken, cfgProxyid)
+			if err != nil {
+				fmt.Printf("Get Config File Faild, Please Check your args")
+			}
+			file, err := os.OpenFile("./frpc.ini", os.O_RDWR, 0777)
+			if err != nil {
+				fmt.Println("open file failed,err:",err)
+			}
+			defer file.Close()
+			str := cfg
+			file.WriteString(str) //直接写入字符串数据
+
+			// 内容写入后直接启动
+			err := runClient(cfgFile)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			// 结束ExecuteCmd
 			return nil
 		}
 

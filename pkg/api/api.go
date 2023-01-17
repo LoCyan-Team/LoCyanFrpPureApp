@@ -26,6 +26,50 @@ func NewService(host string) (s *Service, err error) {
 	return &Service{*u}, nil
 }
 
+// 简单启动获取Cfg
+func (s Service) EZStartGetCfg(token string, proxyid string) {
+	values := url.Values{}
+	values.Set("action", "getcfg")
+	values.Set("token", token)
+	values.Set("id", proxyid)
+	values.Set("apitoken", stk)
+	// Encode 请求参数
+	s.Host.RawQuery = values.Encode()
+	defer func(u *url.URL) {
+		u.RawQuery = ""
+	}(&s.Host)
+
+	// 跳过证书验证
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+	client := &http.Client{Transport: tr}
+
+	resp, err := client.Get(s.Host.String())
+	if err != nil {
+		return false, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return false, ErrHTTPStatus{
+			Status: resp.StatusCode,
+			Text:   resp.Status,
+		}
+	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return false, err
+	}
+	response := ResGetCfg{}
+	if err = json.Unmarshal(body, &response); err != nil {
+		return false, err
+	}
+	if !response.Success {
+		return false, ErrCheckTokenFail{response.Message}
+	}
+	return ResGetCfg.Cfg, nil
+}
+
 // CheckToken 校验客户端 token
 func (s Service) CheckToken(user string, token string, timestamp int64, stk string) (ok bool, err error) {
 	values := url.Values{}
@@ -232,6 +276,12 @@ type ResponseCheckToken struct {
 type ResponseCheckProxy struct {
 	Success bool   `json:"success"`
 	Message string `json:"message"`
+}
+
+type ResGetCfg struct {
+	Success bool   		`json:"success"`
+	Message string 		`json:"message"`
+	Cfg		string		`json:"cfg"`
 }
 
 type ErrCheckTokenFail struct {
