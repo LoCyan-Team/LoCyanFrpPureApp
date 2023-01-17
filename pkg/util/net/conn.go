@@ -215,3 +215,8 @@ func (conn *wrapQuicStream) RemoteAddr() net.Addr {
 	}
 	return (*net.TCPAddr)(nil)
 }
+
+func (conn *wrapQuicStream) Close() error {
+	conn.Stream.CancelRead(0)
+	return conn.Stream.Close()
+}
