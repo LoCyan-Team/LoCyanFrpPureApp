@@ -164,7 +164,7 @@ var rootCmd = &cobra.Command{
 					os.Exit(1)
 				}
 
-				fmt.Printf("成功写入文本，字符数：", num)
+				fmt.Println("成功写入文本，字符数：%s", num)
 
 				// 内容写入后直接启动
 				err4 := runClient(cfgFile)
