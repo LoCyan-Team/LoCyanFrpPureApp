@@ -136,32 +136,44 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		if cfgToken != "" {
-			if cfgProxyid != "" {
-				fmt.Printf("Getting Config File from LoCyanFrp API...\n")
-				s, err := api.NewService("https://www.locyanfrp.cn/api/")
-				cfg, err := s.EZStartGetCfg(cfgToken, cfgProxyid)
-				if err != nil {
-					fmt.Printf("Get Config File Faild, Please Check your args\n")
-				}
-				file, err := os.OpenFile("./frpc.ini", os.O_RDWR, 0777)
-				if err != nil {
-					fmt.Println("open file failed,err:",err)
-				}
-				defer file.Close()
-				str := cfg
-				file.WriteString(str) //直接写入字符串数据
-
-				// 内容写入后直接启动
-				err2 := runClient(cfgFile)
-				if err2 != nil {
-					fmt.Println(err2)
-					os.Exit(1)
-				}
-				// 结束ExecuteCmd
-				return nil
+		if cfgToken != "" && cfgProxyid != ""{
+			fmt.Printf("Getting Config File from LoCyanFrp API...\n")
+			s, err := api.NewService("https://www.locyanfrp.cn/api/")
+			cfg, err := s.EZStartGetCfg(cfgToken, cfgProxyid)
+			if err != nil {
+				fmt.Printf("Get Config File Failed, Please Check your args\n")
+				fmt.Printf(err)
+				// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
+				os.Exit(1)
 			}
+
+			// 删除原先文件，防止窜行
+			os.RemoveAll("./frpc.ini")
+
+			// 有则打开，无则新建
+			file, error := os.OpenFile("./frpc.ini", os.O_RDWR|os.O_CREATE, 0777);
+			if err != nil {
+				fmt.Errorf("Open File Failed, Err:", err)
+			}
+			defer file.Close()
+			str := cfg
+			num, err2 := file.WriteString(str) //直接写入字符串数据
+			// 写入文件是否成功检测
+			if err2 != nil {
+				fmt.Errorf("Write String Failed, Err: %s", err2)
+				os.Exit(1)
+			}
+
+			// 内容写入后直接启动
+			err3 := runClient(cfgFile)
+			if err3 != nil {
+				fmt.Errorf(err3)
+				os.Exit(1)
+			}
+			// 结束ExecuteCmd
+			return nil
 		}
+	}
 
 		// Do not show command usage here.
 		err := runClient(cfgFile)
