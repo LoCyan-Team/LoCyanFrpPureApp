@@ -89,7 +89,7 @@ func (cm *ControlManager) SearchByID(runId string) (ctl *Control, ok bool) {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
 	for k, v := range cm.ctlsByRunID {
-		if strings.IndexAny(k, runId+"-") > -1 {
+		if strings.ContainsAny(k, runId+"-") > -1 {
 			if v == nil {
 				return
 			}
