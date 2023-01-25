@@ -355,7 +355,7 @@ func (svr *Service) APICloseClient(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resp.Status = 404
 		resp.Msg = err.Error()
-		runID = "nan"
+		resp.runID = "nan"
 	} else {
 		resp.Status = 200
 		resp.Msg = "OK"
