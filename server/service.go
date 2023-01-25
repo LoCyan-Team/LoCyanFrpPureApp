@@ -610,7 +610,7 @@ func (svr *Service) RegisterVisitorConn(visitorConn net.Conn, newMsg *msg.NewVis
 }
 
 func (svr *Service) CloseUser(user string) error {
-	ctl, ok := svr.ctlManager.GetByID(user)
+	ctl, ok := svr.ctlManager.SearchByID(user)
 	if !ok {
 		return fmt.Errorf("user not login")
 	}
