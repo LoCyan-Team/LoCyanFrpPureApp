@@ -22,6 +22,7 @@ import (
 	"runtime/debug"
 	"sync"
 	"time"
+	"strings"
 
 	"github.com/fatedier/golib/control/shutdown"
 	"github.com/fatedier/golib/crypto"
@@ -87,12 +88,12 @@ func (cm *ControlManager) GetByID(runID string) (ctl *Control, ok bool) {
 func (cm *ControlManager) SearchByID(runId string) (ctl *Control, ok bool) {
 	cm.mu.RLock()
 	defer cm.mu.RUnlock()
-	for k, v := range cm.ctlsByRunId {
+	for k, v := range cm.ctlsByRunID {
 		if strings.IndexAny(k, runId+"-") > -1 {
 			if v == nil {
 				return
 			}
-			ctl, ok = cm.ctlsByRunId[k]
+			ctl, ok = cm.ctlsByRunID[k]
 		}
 	}
 	return
