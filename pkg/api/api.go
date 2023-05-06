@@ -12,12 +12,12 @@ import (
 	"github.com/fatedier/frp/pkg/msg"
 )
 
-// Service sakurafrp api servie
+// Service locyanfrp api servie
 type Service struct {
 	Host url.URL
 }
 
-// NewService crate sakurafrp api servie
+// NewService crate locyanfrp api servie
 func NewService(host string) (s *Service, err error) {
 	u, err := url.Parse(host)
 	if err != nil {
@@ -38,23 +38,24 @@ func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err er
 		u.RawQuery = ""
 	}(&s.Host)
 
-	// 跳过证书验证
 	tr := &http.Transport{
+		// 跳过证书验证
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true
 	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
+	defer resp.Body.Close()
 	if err != nil {
-		return "", err
+		return false, err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return "", ErrHTTPStatus{
+		return false, ErrHTTPStatus{
 			Status: resp.StatusCode,
 			Text:   resp.Status,
 		}
 	}
-	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
@@ -83,11 +84,14 @@ func (s Service) CheckToken(user string, token string, timestamp int64, stk stri
 	}(&s.Host)
 
 	tr := &http.Transport{
+		// 跳过证书验证
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true
 	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
+	defer resp.Body.Close()
 	if err != nil {
 		return false, err
 	}
@@ -97,7 +101,6 @@ func (s Service) CheckToken(user string, token string, timestamp int64, stk stri
 			Text:   resp.Status,
 		}
 	}
-	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return false, err
@@ -171,11 +174,14 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 	}(&s.Host)
 
 	tr := &http.Transport{
+		// 跳过证书验证
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true
 	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
+	defer resp.Body.Close()
 	if err != nil {
 		return false, err
 	}
@@ -185,7 +191,6 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 			Text:   resp.Status,
 		}
 	}
-	defer resp.Body.Close()
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return false, err
@@ -214,31 +219,36 @@ func (s Service) GetProxyLimit(user string, timestamp int64, stk string) (inLimi
 	}(&s.Host)
 
 	tr := &http.Transport{
+		// 跳过证书验证
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true
 	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
-	if err != nil {
-		return 0, 0, err
-	}
 	defer resp.Body.Close()
+	if err != nil {
+		return 1280, 1280, err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return 1280, 1280, err
+	}
 	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return 0, 0, err
+		return 1280, 1280, err
 	}
 
 	er := &ErrHTTPStatus{}
 	if err = json.Unmarshal(body, er); err != nil {
-		return 0, 0, err
+		return 1280, 1280, err
 	}
 	if er.Status != 200 {
-		return 0, 0, er
+		return 1280, 1280, er
 	}
 
 	response := &ResponseGetLimit{}
 	if err = json.Unmarshal(body, response); err != nil {
-		return 0, 0, err
+		return 1280, 1280, err
 	}
 
 	// 这里直接返回 uint64 应该问题不大
