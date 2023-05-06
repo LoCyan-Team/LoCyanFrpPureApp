@@ -27,7 +27,7 @@ func NewService(host string) (s *Service, err error) {
 }
 
 // 简单启动获取Cfg
-func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err error){
+func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err error) {
 	values := url.Values{}
 	values.Set("action", "getcfg")
 	values.Set("token", token)
@@ -41,7 +41,7 @@ func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err er
 	tr := &http.Transport{
 		// 跳过证书验证
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		DisableKeepAlives: true
+		DisableKeepAlives: true,
 	}
 	client := &http.Client{Transport: tr}
 
@@ -86,7 +86,7 @@ func (s Service) CheckToken(user string, token string, timestamp int64, stk stri
 	tr := &http.Transport{
 		// 跳过证书验证
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		DisableKeepAlives: true
+		DisableKeepAlives: true,
 	}
 	client := &http.Client{Transport: tr}
 
@@ -176,7 +176,7 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 	tr := &http.Transport{
 		// 跳过证书验证
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		DisableKeepAlives: true
+		DisableKeepAlives: true,
 	}
 	client := &http.Client{Transport: tr}
 
@@ -221,7 +221,7 @@ func (s Service) GetProxyLimit(user string, timestamp int64, stk string) (inLimi
 	tr := &http.Transport{
 		// 跳过证书验证
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		DisableKeepAlives: true
+		DisableKeepAlives: true,
 	}
 	client := &http.Client{Transport: tr}
 
@@ -288,9 +288,9 @@ type ResponseCheckProxy struct {
 }
 
 type ResGetCfg struct {
-	Success bool   		`json:"success"`
-	Message string 		`json:"message"`
-	Cfg		string		`json:"cfg"`
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+	Cfg     string `json:"cfg"`
 }
 
 type ErrCheckTokenFail struct {
