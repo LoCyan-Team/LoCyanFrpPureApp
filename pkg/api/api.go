@@ -48,10 +48,10 @@ func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err er
 	resp, err := client.Get(s.Host.String())
 	defer resp.Body.Close()
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, ErrHTTPStatus{
+		return "", ErrHTTPStatus{
 			Status: resp.StatusCode,
 			Text:   resp.Status,
 		}
