@@ -34,7 +34,6 @@ import (
 	"github.com/fatedier/frp/pkg/util/log"
 	"github.com/fatedier/frp/pkg/util/version"
 	"github.com/fatedier/frp/pkg/api"
-	"github.com/fatedier/frp/pkg/util/xlog"
 )
 
 const (
@@ -167,7 +166,7 @@ var rootCmd = &cobra.Command{
 					os.Exit(1)
 				}
 
-				xl.info("成功写入文本，字符数：%s", num)
+				fmt.Printf("成功写入文本，字符数：%s", num)
 
 				// 内容写入后直接启动
 				err4 := runClient(cfgFile)
