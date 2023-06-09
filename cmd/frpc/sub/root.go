@@ -34,6 +34,7 @@ import (
 	"github.com/fatedier/frp/pkg/util/log"
 	"github.com/fatedier/frp/pkg/util/version"
 	"github.com/fatedier/frp/pkg/api"
+	"github.com/fatedier/frp/pkg/util/xlog"
 )
 
 const (
