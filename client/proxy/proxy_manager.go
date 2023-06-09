@@ -45,7 +45,7 @@ func (pm *Manager) StartProxy(name string, remoteAddr string, serverRespErr stri
 	pxy, ok := pm.proxies[name]
 	pm.mu.RUnlock()
 	if !ok {
-		return fmt.Errorf("proxy [%s] not found", name)
+		return fmt.Errorf("找不到隧道 [%s] ", name)
 	}
 
 	err := pxy.SetRunningStatus(remoteAddr, serverRespErr)
@@ -139,6 +139,6 @@ func (pm *Manager) Reload(pxyCfgs map[string]config.ProxyConf) {
 		}
 	}
 	if len(addPxyNames) > 0 {
-		xl.Info("proxy added: %v", addPxyNames)
+		xl.Info("成功连接至节点, 正在鉴权: %v", addPxyNames)
 	}
 }

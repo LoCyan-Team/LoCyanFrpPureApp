@@ -128,7 +128,7 @@ func (ctl *Control) HandleReqWorkConn(inMsg *msg.ReqWorkConn) {
 	xl := ctl.xl
 	workConn, err := ctl.connectServer()
 	if err != nil {
-		xl.Warn("start new connection to server error: %v", err)
+		xl.Warn("无法连接至映射服务器, 原因: %v", err)
 		return
 	}
 
@@ -136,23 +136,23 @@ func (ctl *Control) HandleReqWorkConn(inMsg *msg.ReqWorkConn) {
 		RunID: ctl.runID,
 	}
 	if err = ctl.authSetter.SetNewWorkConn(m); err != nil {
-		xl.Warn("error during NewWorkConn authentication: %v", err)
+		xl.Warn("验证 WorkConn 时发生错误: %v", err)
 		return
 	}
 	if err = msg.WriteMsg(workConn, m); err != nil {
-		xl.Warn("work connection write to server error: %v", err)
+		xl.Warn("无法将任务进程写入至服务器: %v", err)
 		workConn.Close()
 		return
 	}
 
 	var startMsg msg.StartWorkConn
 	if err = msg.ReadMsgInto(workConn, &startMsg); err != nil {
-		xl.Trace("work connection closed before response StartWorkConn message: %v", err)
+		xl.Trace("任务进程在服务器响应 StartWorkConn 前关闭: %v", err)
 		workConn.Close()
 		return
 	}
 	if startMsg.Error != "" {
-		xl.Error("StartWorkConn contains error: %s", startMsg.Error)
+		xl.Error("StartWorkConn 包含错误: %s", startMsg.Error)
 		workConn.Close()
 		return
 	}
@@ -167,7 +167,7 @@ func (ctl *Control) HandleNewProxyResp(inMsg *msg.NewProxyResp) {
 	// Start a new proxy handler if no error got
 	err := ctl.pm.StartProxy(inMsg.ProxyName, inMsg.RemoteAddr, inMsg.Error)
 	if err != nil {
-		xl.Warn("[%s] start error: %v", inMsg.ProxyName, err)
+		xl.Warn("[%s] 启动失败, 原因: %v", inMsg.ProxyName, err)
 	} else {
 		xl.Info("[%s] 映射启动成功, 感谢您使用LCF!", inMsg.ProxyName)
 	}
@@ -232,19 +232,19 @@ func (ctl *Control) writer() {
 	defer ctl.writerShutdown.Done()
 	encWriter, err := crypto.NewWriter(ctl.conn, []byte(ctl.clientCfg.Token))
 	if err != nil {
-		xl.Error("crypto new writer error: %v", err)
+		xl.Error("加密新写入的程序过程中发生错误 %v", err)
 		ctl.conn.Close()
 		return
 	}
 	for {
 		m, ok := <-ctl.sendCh
 		if !ok {
-			xl.Info("control writer is closing")
+			xl.Info("正在关闭控制器")
 			return
 		}
 
 		if err := msg.WriteMsg(encWriter, m); err != nil {
-			xl.Warn("write message to control connection error: %v", err)
+			xl.Warn("在向控制器写入数据时发生错误: %v", err)
 			return
 		}
 	}
@@ -283,16 +283,16 @@ func (ctl *Control) msgHandler() {
 		select {
 		case <-hbSendCh:
 			// send heartbeat to server
-			xl.Debug("send heartbeat to server")
+			xl.Debug("向服务器发送心跳包")
 			pingMsg := &msg.Ping{}
 			if err := ctl.authSetter.SetPing(pingMsg); err != nil {
-				xl.Warn("error during ping authentication: %v", err)
+				xl.Warn("进行 PING 验证过程中发生错误: %v", err)
 				return
 			}
 			ctl.sendCh <- pingMsg
 		case <-hbCheckCh:
 			if time.Since(ctl.lastPong) > time.Duration(ctl.clientCfg.HeartbeatTimeout)*time.Second {
-				xl.Warn("heartbeat timeout")
+				xl.Warn("心跳包超时")
 				// let reader() stop
 				ctl.conn.Close()
 				return
@@ -314,7 +314,7 @@ func (ctl *Control) msgHandler() {
 					return
 				}
 				ctl.lastPong = time.Now()
-				xl.Debug("receive heartbeat from server")
+				xl.Debug("接收到来自服务器的心跳包")
 			}
 		}
 	}

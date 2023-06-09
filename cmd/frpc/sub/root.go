@@ -139,11 +139,11 @@ var rootCmd = &cobra.Command{
 		}
 
 		if cfgToken != "" && cfgProxyid != "" {
-				fmt.Printf("Getting Config File from LoCyanFrp API...\n")
+				fmt.Printf("To Get Config File from LoCyanFrp API...\n")
 				s, err := api.NewService("https://www.locyanfrp.cn/api/")
 				cfg, err := s.EZStartGetCfg(cfgToken, cfgProxyid)
 				if err != nil {
-					fmt.Printf("Get Config File Failed, Please Check your args\n")
+					fmt.Printf("Get Config File Failed, Please Check Your Args\n")
 					fmt.Println(err)
 					// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
 					os.Exit(1)
@@ -166,7 +166,7 @@ var rootCmd = &cobra.Command{
 					os.Exit(1)
 				}
 
-				fmt.Println("成功写入文本，字符数：%s", num)
+				xl.info("成功写入文本，字符数：%s", num)
 
 				// 内容写入后直接启动
 				err4 := runClient(cfgFile)

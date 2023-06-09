@@ -130,7 +130,7 @@ func (svr *Service) Run() error {
 	for {
 		conn, cm, err := svr.login()
 		if err != nil {
-			xl.Warn("login to server failed: %v", err)
+			xl.Warn("无法连接至映射服务器, 原因: %v", err)
 
 			// if login_fail_exit is true, just exit this program
 			// otherwise sleep a while and try again to connect to server
@@ -158,9 +158,9 @@ func (svr *Service) Run() error {
 		address := net.JoinHostPort(svr.cfg.AdminAddr, strconv.Itoa(svr.cfg.AdminPort))
 		err := svr.RunAdminServer(address)
 		if err != nil {
-			log.Warn("run admin server error: %v", err)
+			log.Warn("在启动管理服务器的过程中发生错误: %v", err)
 		}
-		log.Info("admin server listen on %s:%d", svr.cfg.AdminAddr, svr.cfg.AdminPort)
+		log.Info("管理服务器运行在 %s:%d", svr.cfg.AdminAddr, svr.cfg.AdminPort)
 	}
 	<-svr.ctx.Done()
 	return nil
@@ -187,7 +187,7 @@ func (svr *Service) keepControllerWorking() {
 		// the first three retry with no delay
 		if reconnectCounts > 3 {
 			util.RandomSleep(reconnectDelay, 0.9, 1.1)
-			xl.Info("wait %v to reconnect", reconnectDelay)
+			xl.Info("等待 %v s 后重连", reconnectDelay)
 			reconnectDelay *= 2
 		} else {
 			util.RandomSleep(time.Second, 0, 0.5)
@@ -207,10 +207,10 @@ func (svr *Service) keepControllerWorking() {
 				return
 			}
 
-			xl.Info("try to reconnect to server...")
+			xl.Info("正在尝试重新连接至服务器...")
 			conn, cm, err := svr.login()
 			if err != nil {
-				xl.Warn("reconnect to server error: %v, wait %v for another retry", err, delayTime)
+				xl.Warn("重连失败: %v, 等待 %v s 后再次尝试", err, delayTime)
 				util.RandomSleep(delayTime, 0.9, 1.1)
 
 				delayTime *= 2
@@ -295,7 +295,7 @@ func (svr *Service) login() (conn net.Conn, cm *ConnectionManager, err error) {
 	xl.AppendPrefix(svr.runID)
 
 	svr.serverUDPPort = loginRespMsg.ServerUDPPort
-	xl.Info("login to server success, get run id [%s], server udp port [%d]", loginRespMsg.RunID, loginRespMsg.ServerUDPPort)
+	xl.Info("成功登录至服务器, 获取到 RunID: [%s], 服务器UDP端口: [%d]", loginRespMsg.RunID, loginRespMsg.ServerUDPPort)
 	return
 }
 
@@ -367,7 +367,7 @@ func (cm *ConnectionManager) OpenConnection() error {
 			tlsConfig, err = transport.NewClientTLSConfig("", "", "", sn)
 		}
 		if err != nil {
-			xl.Warn("fail to build tls configuration, err: %v", err)
+			xl.Warn("生成 tls 配置错误, 错误信息: %v", err)
 			return err
 		}
 		tlsConfig.NextProtos = []string{"frp"}
@@ -440,14 +440,14 @@ func (cm *ConnectionManager) realConnect() (net.Conn, error) {
 			cm.cfg.TLSTrustedCaFile,
 			sn)
 		if err != nil {
-			xl.Warn("fail to build tls configuration, err: %v", err)
+			xl.Warn("生成 tls 配置错误, 错误信息: %v", err)
 			return nil, err
 		}
 	}
 
 	proxyType, addr, auth, err := libdial.ParseProxyURL(cm.cfg.HTTPProxy)
 	if err != nil {
-		xl.Error("fail to parse proxy url")
+		xl.Error("无法识别代理服务器")
 		return nil, err
 	}
 	dialOptions := []libdial.DialOption{}
