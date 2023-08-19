@@ -25,14 +25,21 @@ import (
 	"github.com/fatedier/golib/crypto"
 
 	"github.com/fatedier/frp/client/proxy"
+	"github.com/fatedier/frp/client/visitor"
 	"github.com/fatedier/frp/pkg/auth"
 	"github.com/fatedier/frp/pkg/config"
 	"github.com/fatedier/frp/pkg/msg"
+	"github.com/fatedier/frp/pkg/transport"
 	"github.com/fatedier/frp/pkg/util/xlog"
 )
 
 type Control struct {
-	// uniq id got from frps, attach it in loginMsg
+	// service context
+	ctx context.Context
+	xl  *xlog.Logger
+
+	// Unique ID obtained from frps.
+	// It should be attached to the login message when reconnecting.
 	runID string
 
 	// manage all proxies
@@ -40,7 +47,7 @@ type Control struct {
 	pm      *proxy.Manager
 
 	// manage all visitors
-	vm *VisitorManager
+	vm *visitor.Manager
 
 	// control connection
 	conn net.Conn
@@ -68,16 +75,10 @@ type Control struct {
 	writerShutdown     *shutdown.Shutdown
 	msgHandlerShutdown *shutdown.Shutdown
 
-	// The UDP port that the server is listening on
-	serverUDPPort int
-
-	xl *xlog.Logger
-
-	// service context
-	ctx context.Context
-
 	// sets authentication based on selected method
 	authSetter auth.Setter
+
+	msgTransporter transport.MessageTransporter
 }
 
 func NewControl(
@@ -85,11 +86,12 @@ func NewControl(
 	clientCfg config.ClientCommonConf,
 	pxyCfgs map[string]config.ProxyConf,
 	visitorCfgs map[string]config.VisitorConf,
-	serverUDPPort int,
 	authSetter auth.Setter,
 ) *Control {
 	// new xlog instance
 	ctl := &Control{
+		ctx:                ctx,
+		xl:                 xlog.FromContextSafe(ctx),
 		runID:              runID,
 		conn:               conn,
 		cm:                 cm,
@@ -102,14 +104,12 @@ func NewControl(
 		readerShutdown:     shutdown.New(),
 		writerShutdown:     shutdown.New(),
 		msgHandlerShutdown: shutdown.New(),
-		serverUDPPort:      serverUDPPort,
-		xl:                 xlog.FromContextSafe(ctx),
-		ctx:                ctx,
 		authSetter:         authSetter,
 	}
-	ctl.pm = proxy.NewManager(ctl.ctx, ctl.sendCh, clientCfg, serverUDPPort)
+	ctl.msgTransporter = transport.NewMessageTransporter(ctl.sendCh)
+	ctl.pm = proxy.NewManager(ctl.ctx, clientCfg, ctl.msgTransporter)
 
-	ctl.vm = NewVisitorManager(ctl.ctx, ctl)
+	ctl.vm = visitor.NewManager(ctl.ctx, ctl.runID, ctl.clientCfg, ctl.connectServer, ctl.msgTransporter)
 	ctl.vm.Reload(visitorCfgs)
 	return ctl
 }
@@ -124,11 +124,11 @@ func (ctl *Control) Run() {
 	go ctl.vm.Run()
 }
 
-func (ctl *Control) HandleReqWorkConn(inMsg *msg.ReqWorkConn) {
+func (ctl *Control) HandleReqWorkConn(_ *msg.ReqWorkConn) {
 	xl := ctl.xl
 	workConn, err := ctl.connectServer()
 	if err != nil {
-		xl.Warn("无法连接至映射服务器, 原因: %v", err)
+		xl.Warn("无法和服务器节点建立链接: %v", err)
 		return
 	}
 
@@ -136,23 +136,23 @@ func (ctl *Control) HandleReqWorkConn(inMsg *msg.ReqWorkConn) {
 		RunID: ctl.runID,
 	}
 	if err = ctl.authSetter.SetNewWorkConn(m); err != nil {
-		xl.Warn("验证 WorkConn 时发生错误: %v", err)
+		xl.Warn("验证新的工作链接时出错: %v", err)
 		return
 	}
 	if err = msg.WriteMsg(workConn, m); err != nil {
-		xl.Warn("无法将任务进程写入至服务器: %v", err)
+		xl.Warn("无法将一个工作的链接写入至服务器: %v", err)
 		workConn.Close()
 		return
 	}
 
 	var startMsg msg.StartWorkConn
 	if err = msg.ReadMsgInto(workConn, &startMsg); err != nil {
-		xl.Trace("任务进程在服务器响应 StartWorkConn 前关闭: %v", err)
+		xl.Trace("工作链接在服务器返回开始工作链接前关闭: %v", err)
 		workConn.Close()
 		return
 	}
 	if startMsg.Error != "" {
-		xl.Error("StartWorkConn 包含错误: %s", startMsg.Error)
+		xl.Error("开始工作线程通知匹配失败: %s", startMsg.Error)
 		workConn.Close()
 		return
 	}
@@ -167,9 +167,19 @@ func (ctl *Control) HandleNewProxyResp(inMsg *msg.NewProxyResp) {
 	// Start a new proxy handler if no error got
 	err := ctl.pm.StartProxy(inMsg.ProxyName, inMsg.RemoteAddr, inMsg.Error)
 	if err != nil {
-		xl.Warn("[%s] 启动失败, 原因: %v", inMsg.ProxyName, err)
+		xl.Warn("[%s] 启动失败: %v", inMsg.ProxyName, err)
 	} else {
 		xl.Info("[%s] 映射启动成功, 感谢您使用LCF!", inMsg.ProxyName)
+	}
+}
+
+func (ctl *Control) HandleNatHoleResp(inMsg *msg.NatHoleResp) {
+	xl := ctl.xl
+
+	// Dispatch the NatHoleResp message to the related proxy.
+	ok := ctl.msgTransporter.DispatchWithType(inMsg, msg.TypeNameNatHoleResp, inMsg.TransactionID)
+	if !ok {
+		xl.Trace("dispatch NatHoleResp message to related proxy error")
 	}
 }
 
@@ -188,7 +198,7 @@ func (ctl *Control) GracefulClose(d time.Duration) error {
 	return nil
 }
 
-// ClosedDoneCh returns a channel which will be closed after all resources are released
+// ClosedDoneCh returns a channel that will be closed after all resources are released
 func (ctl *Control) ClosedDoneCh() <-chan struct{} {
 	return ctl.closedDoneCh
 }
@@ -203,7 +213,7 @@ func (ctl *Control) reader() {
 	xl := ctl.xl
 	defer func() {
 		if err := recover(); err != nil {
-			xl.Error("panic error: %v", err)
+			xl.Error("panic 运行过程中出错: %v", err)
 			xl.Error(string(debug.Stack()))
 		}
 	}()
@@ -215,10 +225,10 @@ func (ctl *Control) reader() {
 		m, err := msg.ReadMsg(encReader)
 		if err != nil {
 			if err == io.EOF {
-				xl.Debug("read from control connection EOF")
+				xl.Debug("服务器返回空链接")
 				return
 			}
-			xl.Warn("read error: %v", err)
+			xl.Warn("读取返回内容失败: %v", err)
 			ctl.conn.Close()
 			return
 		}
@@ -232,30 +242,30 @@ func (ctl *Control) writer() {
 	defer ctl.writerShutdown.Done()
 	encWriter, err := crypto.NewWriter(ctl.conn, []byte(ctl.clientCfg.Token))
 	if err != nil {
-		xl.Error("加密新写入的程序过程中发生错误 %v", err)
+		xl.Error("加密新的 Writer 失败: %v", err)
 		ctl.conn.Close()
 		return
 	}
 	for {
 		m, ok := <-ctl.sendCh
 		if !ok {
-			xl.Info("正在关闭控制器")
+			xl.Info("正在和服务器断开链接...")
 			return
 		}
 
 		if err := msg.WriteMsg(encWriter, m); err != nil {
-			xl.Warn("在向控制器写入数据时发生错误: %v", err)
+			xl.Warn("将信息写入至工作链接时出错: %v", err)
 			return
 		}
 	}
 }
 
-// msgHandler handles all channel events and do corresponding operations.
+// msgHandler handles all channel events and performs corresponding operations.
 func (ctl *Control) msgHandler() {
 	xl := ctl.xl
 	defer func() {
 		if err := recover(); err != nil {
-			xl.Error("panic error: %v", err)
+			xl.Error("panic 运行过程中出错: %v", err)
 			xl.Error(string(debug.Stack()))
 		}
 	}()
@@ -286,13 +296,13 @@ func (ctl *Control) msgHandler() {
 			xl.Debug("向服务器发送心跳包")
 			pingMsg := &msg.Ping{}
 			if err := ctl.authSetter.SetPing(pingMsg); err != nil {
-				xl.Warn("进行 PING 验证过程中发生错误: %v", err)
+				xl.Warn("error during ping authentication: %v", err)
 				return
 			}
 			ctl.sendCh <- pingMsg
 		case <-hbCheckCh:
 			if time.Since(ctl.lastPong) > time.Duration(ctl.clientCfg.HeartbeatTimeout)*time.Second {
-				xl.Warn("心跳包超时")
+				xl.Warn("heartbeat timeout")
 				// let reader() stop
 				ctl.conn.Close()
 				return
@@ -307,6 +317,8 @@ func (ctl *Control) msgHandler() {
 				go ctl.HandleReqWorkConn(m)
 			case *msg.NewProxyResp:
 				ctl.HandleNewProxyResp(m)
+			case *msg.NatHoleResp:
+				ctl.HandleNatHoleResp(m)
 			case *msg.Pong:
 				if m.Error != "" {
 					xl.Error("Pong contains error: %s", m.Error)
@@ -314,7 +326,7 @@ func (ctl *Control) msgHandler() {
 					return
 				}
 				ctl.lastPong = time.Now()
-				xl.Debug("接收到来自服务器的心跳包")
+				xl.Debug("receive heartbeat from server")
 			}
 		}
 	}

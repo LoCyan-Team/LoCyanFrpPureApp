@@ -9,8 +9,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/onsi/ginkgo"
-	"github.com/onsi/ginkgo/config"
+	"github.com/onsi/ginkgo/v2"
 
 	"github.com/fatedier/frp/test/e2e/mock/server"
 	"github.com/fatedier/frp/test/e2e/pkg/port"
@@ -63,11 +62,12 @@ type Framework struct {
 }
 
 func NewDefaultFramework() *Framework {
+	suiteConfig, _ := ginkgo.GinkgoConfiguration()
 	options := Options{
-		TotalParallelNode: config.GinkgoConfig.ParallelTotal,
-		CurrentNodeIndex:  config.GinkgoConfig.ParallelNode,
-		FromPortIndex:     20000,
-		ToPortIndex:       50000,
+		TotalParallelNode: suiteConfig.ParallelTotal,
+		CurrentNodeIndex:  suiteConfig.ParallelProcess,
+		FromPortIndex:     10000,
+		ToPortIndex:       60000,
 	}
 	return NewFramework(options)
 }
@@ -118,14 +118,14 @@ func (f *Framework) AfterEach() {
 	// stop processor
 	for _, p := range f.serverProcesses {
 		_ = p.Stop()
-		if TestContext.Debug {
+		if TestContext.Debug || ginkgo.CurrentSpecReport().Failed() {
 			fmt.Println(p.ErrorOutput())
 			fmt.Println(p.StdOutput())
 		}
 	}
 	for _, p := range f.clientProcesses {
 		_ = p.Stop()
-		if TestContext.Debug {
+		if TestContext.Debug || ginkgo.CurrentSpecReport().Failed() {
 			fmt.Println(p.ErrorOutput())
 			fmt.Println(p.StdOutput())
 		}

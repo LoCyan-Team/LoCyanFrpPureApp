@@ -25,7 +25,7 @@ import (
 
 const testVisitorPrefix = "test."
 
-func Test_Visitor_Interface(t *testing.T) {
+func Test_Visitor_Interface(_ *testing.T) {
 	for name := range visitorConfTypeMap {
 		DefaultVisitorConf(name)
 	}
@@ -87,6 +87,10 @@ func Test_Visitor_UnmarshalFromIni(t *testing.T) {
 					BindAddr:   "127.0.0.1",
 					BindPort:   9001,
 				},
+				Protocol:          "quic",
+				MaxRetriesAnHour:  8,
+				MinRetryInterval:  90,
+				FallbackTimeoutMs: 1000,
 			},
 		},
 	}

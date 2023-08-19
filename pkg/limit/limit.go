@@ -3,7 +3,7 @@ package limit
 import (
 	"io"
 
-	frpNet "github.com/fatedier/frp/pkg/util/net"
+	utilnet "github.com/fatedier/frp/pkg/util/net"
 )
 
 const (
@@ -19,13 +19,13 @@ const (
 const BurstLimit = 1024 * 1024 * 1024
 
 type LimitConn struct {
-	frpNet.Conn
+	utilnet.Conn
 
 	lr io.Reader
 	lw io.Writer
 }
 
-func NewLimitConn(maxread, maxwrite uint64, c frpNet.Conn) LimitConn {
+func NewLimitConn(maxread, maxwrite uint64, c utilnet.Conn) LimitConn {
 	// 这里不知道为什么要 49 才能对的上真实速度
 	// 49 是根据 wget 速度来取的，测试了 512、1024、2048、4096、8192 等多种速度下都很准确
 	return LimitConn{

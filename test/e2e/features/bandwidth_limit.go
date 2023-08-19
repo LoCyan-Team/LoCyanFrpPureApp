@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 
 	plugin "github.com/fatedier/frp/pkg/plugin/server"
 	"github.com/fatedier/frp/test/e2e/framework"
@@ -42,7 +42,7 @@ var _ = ginkgo.Describe("[Feature: Bandwidth Limit]", func() {
 		framework.NewRequestExpect(f).Port(remotePort).RequestModify(func(r *request.Request) {
 			r.Body([]byte(content)).Timeout(30 * time.Second)
 		}).ExpectResp([]byte(content)).Ensure()
-		
+
 		duration := time.Since(start)
 		framework.Logf("request duration: %s", duration.String())
 

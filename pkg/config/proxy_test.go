@@ -35,7 +35,7 @@ var (
 	testProxyPrefix = "test."
 )
 
-func Test_Proxy_Interface(t *testing.T) {
+func Test_Proxy_Interface(_ *testing.T) {
 	for name := range proxyConfTypeMap {
 		NewConfByType(name)
 	}
@@ -254,8 +254,10 @@ func Test_Proxy_UnmarshalFromIni(t *testing.T) {
 					},
 					BandwidthLimitMode: BandwidthLimitModeClient,
 				},
-				Role: "server",
-				Sk:   "abcdefg",
+				RoleServerCommonConf: RoleServerCommonConf{
+					Role: "server",
+					Sk:   "abcdefg",
+				},
 			},
 		},
 		{
@@ -279,8 +281,10 @@ func Test_Proxy_UnmarshalFromIni(t *testing.T) {
 					},
 					BandwidthLimitMode: BandwidthLimitModeClient,
 				},
-				Role: "server",
-				Sk:   "abcdefg",
+				RoleServerCommonConf: RoleServerCommonConf{
+					Role: "server",
+					Sk:   "abcdefg",
+				},
 			},
 		},
 		{
@@ -408,8 +412,8 @@ func Test_RangeProxy_UnmarshalFromIni(t *testing.T) {
 							LocalIP:   "114.114.114.114",
 							LocalPort: 6000,
 						},
+						BandwidthLimitMode: BandwidthLimitModeClient,
 					},
-					BandwidthLimitMode: BandwidthLimitModeClient,
 					RemotePort: 6000,
 				},
 				"udp_port_1": &UDPProxyConf{

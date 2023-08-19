@@ -1,42 +1,56 @@
+// Copyright 2023 The frp Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package proxy
 
 import (
 	"context"
 	"fmt"
 	"net"
+	"reflect"
 	"sync"
-
-	"github.com/fatedier/golib/errors"
 
 	"github.com/fatedier/frp/client/event"
 	"github.com/fatedier/frp/pkg/config"
 	"github.com/fatedier/frp/pkg/msg"
+	"github.com/fatedier/frp/pkg/transport"
 	"github.com/fatedier/frp/pkg/util/xlog"
 )
 
 type Manager struct {
-	sendCh  chan (msg.Message)
-	proxies map[string]*Wrapper
+	proxies        map[string]*Wrapper
+	msgTransporter transport.MessageTransporter
 
 	closed bool
 	mu     sync.RWMutex
 
 	clientCfg config.ClientCommonConf
 
-	// The UDP port that the server is listening on
-	serverUDPPort int
-
 	ctx context.Context
 }
 
-func NewManager(ctx context.Context, msgSendCh chan (msg.Message), clientCfg config.ClientCommonConf, serverUDPPort int) *Manager {
+func NewManager(
+	ctx context.Context,
+	clientCfg config.ClientCommonConf,
+	msgTransporter transport.MessageTransporter,
+) *Manager {
 	return &Manager{
-		sendCh:        msgSendCh,
-		proxies:       make(map[string]*Wrapper),
-		closed:        false,
-		clientCfg:     clientCfg,
-		serverUDPPort: serverUDPPort,
-		ctx:           ctx,
+		proxies:        make(map[string]*Wrapper),
+		msgTransporter: msgTransporter,
+		closed:         false,
+		clientCfg:      clientCfg,
+		ctx:            ctx,
 	}
 }
 
@@ -45,7 +59,7 @@ func (pm *Manager) StartProxy(name string, remoteAddr string, serverRespErr stri
 	pxy, ok := pm.proxies[name]
 	pm.mu.RUnlock()
 	if !ok {
-		return fmt.Errorf("找不到隧道 [%s] ", name)
+		return fmt.Errorf("proxy [%s] not found", name)
 	}
 
 	err := pxy.SetRunningStatus(remoteAddr, serverRespErr)
@@ -86,10 +100,7 @@ func (pm *Manager) HandleEvent(payload interface{}) error {
 		return event.ErrPayloadType
 	}
 
-	err := errors.PanicToError(func() {
-		pm.sendCh <- m
-	})
-	return err
+	return pm.msgTransporter.Send(m)
 }
 
 func (pm *Manager) GetAllProxyStatus() []*WorkingStatus {
@@ -111,27 +122,24 @@ func (pm *Manager) Reload(pxyCfgs map[string]config.ProxyConf) {
 	for name, pxy := range pm.proxies {
 		del := false
 		cfg, ok := pxyCfgs[name]
-		if !ok {
-			del = true
-		} else if !pxy.Cfg.Compare(cfg) {
+		if !ok || !reflect.DeepEqual(pxy.Cfg, cfg) {
 			del = true
 		}
 
 		if del {
 			delPxyNames = append(delPxyNames, name)
 			delete(pm.proxies, name)
-
 			pxy.Stop()
 		}
 	}
 	if len(delPxyNames) > 0 {
-		xl.Info("proxy removed: %v", delPxyNames)
+		xl.Info("proxy removed: %s", delPxyNames)
 	}
 
 	addPxyNames := make([]string, 0)
 	for name, cfg := range pxyCfgs {
 		if _, ok := pm.proxies[name]; !ok {
-			pxy := NewWrapper(pm.ctx, cfg, pm.clientCfg, pm.HandleEvent, pm.serverUDPPort)
+			pxy := NewWrapper(pm.ctx, cfg, pm.clientCfg, pm.HandleEvent, pm.msgTransporter)
 			pm.proxies[name] = pxy
 			addPxyNames = append(addPxyNames, name)
 
@@ -139,6 +147,6 @@ func (pm *Manager) Reload(pxyCfgs map[string]config.ProxyConf) {
 		}
 	}
 	if len(addPxyNames) > 0 {
-		xl.Info("成功连接至节点, 正在鉴权: %v", addPxyNames)
+		xl.Info("proxy added: %s", addPxyNames)
 	}
 }

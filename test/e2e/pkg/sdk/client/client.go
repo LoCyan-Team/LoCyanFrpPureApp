@@ -39,43 +39,15 @@ func (c *Client) GetProxyStatus(name string) (*client.ProxyStatusResp, error) {
 	if err != nil {
 		return nil, err
 	}
-	allStatus := &client.StatusResp{}
+	allStatus := make(client.StatusResp)
 	if err = json.Unmarshal([]byte(content), &allStatus); err != nil {
 		return nil, fmt.Errorf("unmarshal http response error: %s", strings.TrimSpace(content))
 	}
-	for _, s := range allStatus.TCP {
-		if s.Name == name {
-			return &s, nil
-		}
-	}
-	for _, s := range allStatus.UDP {
-		if s.Name == name {
-			return &s, nil
-		}
-	}
-	for _, s := range allStatus.HTTP {
-		if s.Name == name {
-			return &s, nil
-		}
-	}
-	for _, s := range allStatus.HTTPS {
-		if s.Name == name {
-			return &s, nil
-		}
-	}
-	for _, s := range allStatus.STCP {
-		if s.Name == name {
-			return &s, nil
-		}
-	}
-	for _, s := range allStatus.XTCP {
-		if s.Name == name {
-			return &s, nil
-		}
-	}
-	for _, s := range allStatus.SUDP {
-		if s.Name == name {
-			return &s, nil
+	for _, pss := range allStatus {
+		for _, ps := range pss {
+			if ps.Name == name {
+				return &ps, nil
+			}
 		}
 	}
 	return nil, fmt.Errorf("no proxy status found")
@@ -83,6 +55,15 @@ func (c *Client) GetProxyStatus(name string) (*client.ProxyStatusResp, error) {
 
 func (c *Client) Reload() error {
 	req, err := http.NewRequest("GET", "http://"+c.address+"/api/reload", nil)
+	if err != nil {
+		return err
+	}
+	_, err = c.do(req)
+	return err
+}
+
+func (c *Client) Stop() error {
+	req, err := http.NewRequest("POST", "http://"+c.address+"/api/stop", nil)
 	if err != nil {
 		return err
 	}

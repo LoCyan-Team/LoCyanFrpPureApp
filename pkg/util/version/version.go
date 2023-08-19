@@ -19,7 +19,7 @@ import (
 	"strings"
 )
 
-var version = "LoCyanFrp 0.47.0"
+var version = "LoCyanFrp-0.51.3"
 
 func Full() string {
 	return version

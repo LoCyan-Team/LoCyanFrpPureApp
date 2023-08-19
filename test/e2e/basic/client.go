@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 
 	"github.com/fatedier/frp/test/e2e/framework"
 	"github.com/fatedier/frp/test/e2e/framework/consts"
@@ -100,5 +100,33 @@ var _ = ginkgo.Describe("[Feature: ClientManage]", func() {
 			r.HTTP().HTTPPath("/")
 		}).Port(dashboardPort).
 			Ensure(framework.ExpectResponseCode(401))
+	})
+
+	ginkgo.It("stop", func() {
+		serverConf := consts.DefaultServerConfig
+
+		adminPort := f.AllocPort()
+		testPort := f.AllocPort()
+		clientConf := consts.DefaultClientConfig + fmt.Sprintf(`
+		admin_port = %d
+
+		[test]
+		type = tcp
+		local_port = {{ .%s }}
+		remote_port = %d
+		`, adminPort, framework.TCPEchoServerPort, testPort)
+
+		f.RunProcesses([]string{serverConf}, []string{clientConf})
+
+		framework.NewRequestExpect(f).Port(testPort).Ensure()
+
+		client := clientsdk.New("127.0.0.1", adminPort)
+		err := client.Stop()
+		framework.ExpectNoError(err)
+
+		time.Sleep(3 * time.Second)
+
+		// frpc stopped so the port is not listened, expect error
+		framework.NewRequestExpect(f).Port(testPort).ExpectError(true).Ensure()
 	})
 })

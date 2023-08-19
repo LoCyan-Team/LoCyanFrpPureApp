@@ -25,7 +25,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/fatedier/frp/assets"
-	frpNet "github.com/fatedier/frp/pkg/util/net"
+	utilnet "github.com/fatedier/frp/pkg/util/net"
 )
 
 var (
@@ -38,12 +38,6 @@ func (svr *Service) RunDashboardServer(address string) (err error) {
 	router := mux.NewRouter()
 	router.HandleFunc("/healthz", svr.Healthz)
 
-	// api, see dashboard_api.go
-	router.HandleFunc("/api/serverinfo", svr.APIServerInfo).Methods("GET")
-	router.HandleFunc("/api/proxy/{type}", svr.APIProxyByType).Methods("GET")
-	router.HandleFunc("/api/proxy/{type}/{name}", svr.APIProxyByTypeAndName).Methods("GET")
-	router.HandleFunc("/api/traffic/{name}", svr.APIProxyTraffic).Methods("GET")
-	router.HandleFunc("/api/client/close/{user}", svr.APICloseClient).Methods("GET")
 	// debug
 	if svr.cfg.PprofEnable {
 		router.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
@@ -56,7 +50,7 @@ func (svr *Service) RunDashboardServer(address string) (err error) {
 	subRouter := router.NewRoute().Subrouter()
 
 	user, passwd := svr.cfg.DashboardUser, svr.cfg.DashboardPwd
-	subRouter.Use(frpNet.NewHTTPAuthMiddleware(user, passwd).Middleware)
+	subRouter.Use(utilnet.NewHTTPAuthMiddleware(user, passwd).SetAuthFailDelay(200 * time.Millisecond).Middleware)
 
 	// metrics
 	if svr.cfg.EnablePrometheus {
@@ -68,10 +62,11 @@ func (svr *Service) RunDashboardServer(address string) (err error) {
 	subRouter.HandleFunc("/api/proxy/{type}", svr.APIProxyByType).Methods("GET")
 	subRouter.HandleFunc("/api/proxy/{type}/{name}", svr.APIProxyByTypeAndName).Methods("GET")
 	subRouter.HandleFunc("/api/traffic/{name}", svr.APIProxyTraffic).Methods("GET")
+	subRouter.HandleFunc("/api/client/close/{user}", svr.APICloseClient).Methods("GET")
 
 	// view
 	subRouter.Handle("/favicon.ico", http.FileServer(assets.FileSystem)).Methods("GET")
-	subRouter.PathPrefix("/static/").Handler(frpNet.MakeHTTPGzipHandler(http.StripPrefix("/static/", http.FileServer(assets.FileSystem)))).Methods("GET")
+	subRouter.PathPrefix("/static/").Handler(utilnet.MakeHTTPGzipHandler(http.StripPrefix("/static/", http.FileServer(assets.FileSystem)))).Methods("GET")
 
 	subRouter.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/static/", http.StatusMovedPermanently)

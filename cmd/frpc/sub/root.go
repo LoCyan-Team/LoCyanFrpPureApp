@@ -15,6 +15,7 @@
 package sub
 
 import (
+	"context"
 	"fmt"
 	"io/fs"
 	"net"
@@ -22,6 +23,7 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -29,11 +31,11 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/fatedier/frp/client"
+	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/auth"
 	"github.com/fatedier/frp/pkg/config"
 	"github.com/fatedier/frp/pkg/util/log"
 	"github.com/fatedier/frp/pkg/util/version"
-	"github.com/fatedier/frp/pkg/api"
 )
 
 const (
@@ -44,9 +46,9 @@ const (
 var (
 	cfgFile     string
 	cfgDir      string
+	cfgProxyid  string
+	cfgToken    string
 	showVersion bool
-	cfgToken	string
-	cfgProxyid	string
 
 	serverAddr      string
 	user            string
@@ -56,6 +58,7 @@ var (
 	logFile         string
 	logMaxDays      int
 	disableLogColor bool
+	dnsServer       string
 
 	proxyName          string
 	localIP            string
@@ -78,7 +81,8 @@ var (
 	bindAddr           string
 	bindPort           int
 
-	tlsEnable bool
+	tlsEnable     bool
+	tlsServerName string
 )
 
 func init() {
@@ -92,100 +96,160 @@ func init() {
 func RegisterCommonFlags(cmd *cobra.Command) {
 	cmd.PersistentFlags().StringVarP(&serverAddr, "server_addr", "s", "127.0.0.1:7000", "frp server's address")
 	cmd.PersistentFlags().StringVarP(&user, "user", "u", "", "user")
-	cmd.PersistentFlags().StringVarP(&protocol, "protocol", "p", "tcp", "tcp or kcp or websocket")
+	cmd.PersistentFlags().StringVarP(&protocol, "protocol", "p", "tcp", "tcp, kcp, quic, websocket, wss")
 	cmd.PersistentFlags().StringVarP(&token, "token", "t", "", "auth token")
 	cmd.PersistentFlags().StringVarP(&logLevel, "log_level", "", "info", "log level")
 	cmd.PersistentFlags().StringVarP(&logFile, "log_file", "", "console", "console or file path")
 	cmd.PersistentFlags().IntVarP(&logMaxDays, "log_max_days", "", 3, "log file reversed days")
 	cmd.PersistentFlags().BoolVarP(&disableLogColor, "disable_log_color", "", false, "disable log color in console")
-	cmd.PersistentFlags().BoolVarP(&tlsEnable, "tls_enable", "", false, "enable frpc tls")
+	cmd.PersistentFlags().BoolVarP(&tlsEnable, "tls_enable", "", true, "enable frpc tls")
+	cmd.PersistentFlags().StringVarP(&tlsServerName, "tls_server_name", "", "", "specify the custom server name of tls certificate")
+	cmd.PersistentFlags().StringVarP(&dnsServer, "dns_server", "", "", "specify dns server instead of using system default one")
 }
 
 var rootCmd = &cobra.Command{
 	Use:   "frpc",
-	Short: "LoCyan Frp Client",
+	Short: "Edited from fatedier/frp, Powered by LoCyanTeam",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if showVersion {
 			fmt.Println(version.Full())
 			return nil
 		}
 
-		fmt.Println("欢迎使用LoCyanFrp映射客户端")
+		log.Info("欢迎使用LoCyanFrp映射客户端! v0.51.0 #20230710001")
+		var wg sync.WaitGroup
+
 		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
 		// Note that it's only designed for testing. It's not guaranteed to be stable.
-
 		if cfgDir != "" {
-			var wg sync.WaitGroup
-			_ = filepath.WalkDir(cfgDir, func(path string, d fs.DirEntry, err error) error {
-				if err != nil {
-					return nil
-				}
-				if d.IsDir() {
-					return nil
-				}
-				wg.Add(1)
-				time.Sleep(time.Millisecond)
-				go func() {
-					defer wg.Done()
-					err := runClient(path)
-					if err != nil {
-						fmt.Printf("frpc service error for config file [%s]\n", path)
-					}
-				}()
-				return nil
-			})
-			wg.Wait()
+			_ = runMultipleClients(cfgDir)
 			return nil
 		}
 
-		if cfgToken != "" && cfgProxyid != "" {
-				fmt.Printf("To Get Config File from LoCyanFrp API...\n")
-				s, err := api.NewService("https://www.locyanfrp.cn/api/")
-				cfg, err := s.EZStartGetCfg(cfgToken, cfgProxyid)
-				if err != nil {
-					fmt.Printf("Get Config File Failed, Please Check Your Args\n")
-					fmt.Println(err)
-					// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
-					os.Exit(1)
-				}
+		log.Info("To Get Config File from LoCyanFrp API...")
+		s, err := api.NewService("https://www.locyanfrp.cn/api/")
 
-				// 删除原先文件，防止窜行
-				os.RemoveAll("./frpc.ini")
-
-				// 有则打开，无则新建
-				file, err2 := os.OpenFile("./frpc.ini", os.O_RDWR|os.O_CREATE, 0777);
-				if err2 != nil {
-					fmt.Println("Open File Failed, Err:", err2)
-				}
-				defer file.Close()
-				str := cfg
-				num, err3 := file.WriteString(str) //直接写入字符串数据
-				// 写入文件是否成功检测
-				if err3 != nil {
-					fmt.Println(err3)
-					os.Exit(1)
-				}
-
-				fmt.Printf("成功写入文本，字符数：%s", num)
-
-				// 内容写入后直接启动
-				err4 := runClient(cfgFile)
-				if err4 != nil {
-					fmt.Println(err4)
-					os.Exit(1)
-				}
-				// 结束ExecuteCmd
-				return nil
+		if err != nil {
+			log.Warn("Initialize API Service Failed, err: %s", err)
 		}
 
+		if cfgToken != "" && cfgProxyid != "" {
+			var ids []string
+			// 提前判断多开
+			if strings.Contains(cfgProxyid, ",") {
+				ids = strings.Split(cfgProxyid, ",")
+			} else {
+				ids = []string{cfgProxyid}
+			}
+
+			if len(ids) > 1 {
+				for i := 0; i < len(ids); i++ {
+					// 每一个都是新的协程
+					wg.Add(1)
+					id := ids[i]
+					go func(id string) {
+						defer wg.Done()
+						// != -1 -> 存在多开
+						if strings.Contains(cfgProxyid, ",") {
+							cfg, err := s.EZStartGetCfg(cfgToken, id)
+							if err != nil {
+								log.Warn("Get Config File Failed, Please Check Your Args, err: %s", err)
+								// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
+								os.Exit(1)
+							}
+
+							file, err := os.OpenFile("./ini/"+id+".ini", os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0777)
+							if err != nil {
+								log.Warn("Open File Failed, Err: %s", err)
+								os.Exit(1)
+							}
+							defer file.Close()
+							str := cfg
+							_, err = file.WriteString(str) //直接写入字符串数据
+							// 写入文件是否成功检测
+							if err != nil {
+								log.Warn("文本在写入的过程中发生了致命错误, Err: %s", err)
+								os.Exit(1)
+							}
+
+							// 内容写入后直接启动
+							fliePath := "./ini/" + id + ".ini"
+							err4 := runClient(fliePath, &wg)
+							if err4 != nil {
+								log.Warn("启动的过程中发生致命错误, Err: %s", err4)
+								os.Exit(1)
+							}
+						}
+					}(id)
+				}
+				wg.Wait()
+				return nil
+			}
+
+			// 没有多开现象
+			cfg, err := s.EZStartGetCfg(cfgToken, cfgProxyid)
+			if err != nil {
+				log.Warn("Get Config File Failed, Please Check Your Args, err: %s", err)
+				// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
+				os.Exit(1)
+			}
+
+			// 删除原先文件，防止窜行
+			// OpenFlie 函数用 os.O_RDWR|os.O_TRUNC|os.O_CREATE 可以直接覆盖原文本
+			// os.RemoveAll("./frpc.ini")
+
+			// 有则打开，无则新建
+			file, err2 := os.OpenFile("./frpc.ini", os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0777)
+			if err2 != nil {
+				log.Warn("Open File Failed, Err: %s", err2)
+			}
+			str := cfg
+			num, err3 := file.WriteString(str) //直接写入字符串数据
+			// 写入文件是否成功检测
+			if err3 != nil {
+				log.Warn("文本在写入的过程中发生了致命错误, Err: %s", err3)
+				os.Exit(1)
+			}
+
+			file.Close()
+			log.Info("成功写入文本，字符数：%s", num)
+
+			// 内容写入后直接启动
+			err4 := runClient(cfgFile, &wg)
+			if err4 != nil {
+				log.Warn("启动的过程中发生致命错误, Err: %s", err4)
+				os.Exit(1)
+			}
+			return nil
+		}
 		// Do not show command usage here.
-		err := runClient(cfgFile)
+		err = runClient(cfgFile, &wg)
 		if err != nil {
-			fmt.Println(err)
 			os.Exit(1)
 		}
 		return nil
 	},
+}
+
+func runMultipleClients(cfgDir string) error {
+	var wg sync.WaitGroup
+	err := filepath.WalkDir(cfgDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return nil
+		}
+		wg.Add(1)
+		time.Sleep(time.Millisecond)
+		go func() {
+			defer wg.Done()
+			err := runClient(path, &wg)
+			if err != nil {
+				fmt.Printf("frpc service error for config file [%s]\n", path)
+			}
+		}()
+		return nil
+	})
+	wg.Wait()
+	return err
 }
 
 func Execute() {
@@ -194,12 +258,11 @@ func Execute() {
 	}
 }
 
-func handleSignal(svr *client.Service, doneCh chan struct{}) {
+func handleTermSignal(svr *client.Service) {
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
 	<-ch
 	svr.GracefulClose(500 * time.Millisecond)
-	close(doneCh)
 }
 
 func parseClientCommonCfgFromCmd() (cfg config.ClientCommonConf, err error) {
@@ -224,11 +287,13 @@ func parseClientCommonCfgFromCmd() (cfg config.ClientCommonConf, err error) {
 	cfg.LogFile = logFile
 	cfg.LogMaxDays = int64(logMaxDays)
 	cfg.DisableLogColor = disableLogColor
+	cfg.DNSServer = dnsServer
 
 	// Only token authentication is supported in cmd mode
 	cfg.ClientConfig = auth.GetDefaultClientConf()
 	cfg.Token = token
 	cfg.TLSEnable = tlsEnable
+	cfg.TLSServerName = tlsServerName
 
 	cfg.Complete()
 	if err = cfg.Validate(); err != nil {
@@ -238,9 +303,11 @@ func parseClientCommonCfgFromCmd() (cfg config.ClientCommonConf, err error) {
 	return
 }
 
-func runClient(cfgFilePath string) error {
+func runClient(cfgFilePath string, wg *sync.WaitGroup) error {
+	defer wg.Done()
 	cfg, pxyCfgs, visitorCfgs, err := config.ParseClientConfig(cfgFilePath)
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	return startService(cfg, pxyCfgs, visitorCfgs, cfgFilePath)
@@ -256,8 +323,8 @@ func startService(
 		cfg.LogMaxDays, cfg.DisableLogColor)
 
 	if cfgFile != "" {
-		log.Trace("start frpc service for config file [%s]", cfgFile)
-		defer log.Trace("frpc service for config file [%s] stopped", cfgFile)
+		log.Info("start frpc service for config file [%s]", cfgFile)
+		defer log.Info("frpc service for config file [%s] stopped", cfgFile)
 	}
 	svr, errRet := client.NewService(cfg, pxyCfgs, visitorCfgs, cfgFile)
 	if errRet != nil {
@@ -265,15 +332,12 @@ func startService(
 		return
 	}
 
-	kcpDoneCh := make(chan struct{})
-	// Capture the exit signal if we use kcp.
-	if cfg.Protocol == "kcp" {
-		go handleSignal(svr, kcpDoneCh)
+	shouldGracefulClose := cfg.Protocol == "kcp" || cfg.Protocol == "quic"
+	// Capture the exit signal if we use kcp or quic.
+	if shouldGracefulClose {
+		go handleTermSignal(svr)
 	}
 
-	err = svr.Run()
-	if err == nil && cfg.Protocol == "kcp" {
-		<-kcpDoneCh
-	}
+	_ = svr.Run(context.Background())
 	return
 }

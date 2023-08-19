@@ -32,6 +32,7 @@ for os in $os_all; do
                 continue
             fi
             mkdir ${frp_path}
+            mkdir "${frp_path}/ini"
             mv ./frpc_${os}_${arch}.exe ${frp_path}/frpc.exe
             mv ./frps_${os}_${arch}.exe ${frp_path}/frps.exe
         else

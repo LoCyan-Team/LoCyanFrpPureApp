@@ -36,7 +36,6 @@ func Test_LoadServerCommonConf(t *testing.T) {
 				[common]
 				bind_addr = 0.0.0.9
 				bind_port = 7009
-				bind_udp_port = 7008
 				kcp_bind_port = 7007
 				proxy_bind_addr = 127.0.0.9
 				vhost_http_port = 89
@@ -104,7 +103,6 @@ func Test_LoadServerCommonConf(t *testing.T) {
 				},
 				BindAddr:               "0.0.0.9",
 				BindPort:               7009,
-				BindUDPPort:            7008,
 				KCPBindPort:            7007,
 				QUICKeepalivePeriod:    10,
 				QUICMaxIdleTimeout:     30,
@@ -134,17 +132,19 @@ func Test_LoadServerCommonConf(t *testing.T) {
 					12: {},
 					99: {},
 				},
-				MaxPoolCount:            59,
-				MaxPortsPerClient:       9,
-				TLSOnly:                 true,
-				TLSCertFile:             "server.crt",
-				TLSKeyFile:              "server.key",
-				TLSTrustedCaFile:        "ca.crt",
-				SubDomainHost:           "frps.com",
-				TCPMux:                  true,
-				TCPMuxKeepaliveInterval: 60,
-				TCPKeepAlive:            7200,
-				UDPPacketSize:           1509,
+				AllowPortsStr:                   "10-12,99",
+				MaxPoolCount:                    59,
+				MaxPortsPerClient:               9,
+				TLSOnly:                         true,
+				TLSCertFile:                     "server.crt",
+				TLSKeyFile:                      "server.key",
+				TLSTrustedCaFile:                "ca.crt",
+				SubDomainHost:                   "frps.com",
+				TCPMux:                          true,
+				TCPMuxKeepaliveInterval:         60,
+				TCPKeepAlive:                    7200,
+				UDPPacketSize:                   1509,
+				NatHoleAnalysisDataReserveHours: 7 * 24,
 
 				HTTPPlugins: map[string]plugin.HTTPPluginOptions{
 					"user-manager": {
@@ -169,7 +169,6 @@ func Test_LoadServerCommonConf(t *testing.T) {
 				[common]
 				bind_addr = 0.0.0.9
 				bind_port = 7009
-				bind_udp_port = 7008
 			`),
 			expected: ServerCommonConf{
 				ServerConfig: auth.ServerConfig{
@@ -179,32 +178,32 @@ func Test_LoadServerCommonConf(t *testing.T) {
 						AuthenticateNewWorkConns: false,
 					},
 				},
-				BindAddr:                "0.0.0.9",
-				BindPort:                7009,
-				BindUDPPort:             7008,
-				QUICKeepalivePeriod:     10,
-				QUICMaxIdleTimeout:      30,
-				QUICMaxIncomingStreams:  100000,
-				ProxyBindAddr:           "0.0.0.9",
-				VhostHTTPTimeout:        60,
-				DashboardAddr:           "0.0.0.0",
-				DashboardUser:           "",
-				DashboardPwd:            "",
-				EnablePrometheus:        false,
-				LogFile:                 "console",
-				LogWay:                  "console",
-				LogLevel:                "info",
-				LogMaxDays:              3,
-				DetailedErrorsToClient:  true,
-				TCPMux:                  true,
-				TCPMuxKeepaliveInterval: 60,
-				TCPKeepAlive:            7200,
-				AllowPorts:              make(map[int]struct{}),
-				MaxPoolCount:            5,
-				HeartbeatTimeout:        90,
-				UserConnTimeout:         10,
-				HTTPPlugins:             make(map[string]plugin.HTTPPluginOptions),
-				UDPPacketSize:           1500,
+				BindAddr:                        "0.0.0.9",
+				BindPort:                        7009,
+				QUICKeepalivePeriod:             10,
+				QUICMaxIdleTimeout:              30,
+				QUICMaxIncomingStreams:          100000,
+				ProxyBindAddr:                   "0.0.0.9",
+				VhostHTTPTimeout:                60,
+				DashboardAddr:                   "0.0.0.0",
+				DashboardUser:                   "",
+				DashboardPwd:                    "",
+				EnablePrometheus:                false,
+				LogFile:                         "console",
+				LogWay:                          "console",
+				LogLevel:                        "info",
+				LogMaxDays:                      3,
+				DetailedErrorsToClient:          true,
+				TCPMux:                          true,
+				TCPMuxKeepaliveInterval:         60,
+				TCPKeepAlive:                    7200,
+				AllowPorts:                      make(map[int]struct{}),
+				MaxPoolCount:                    5,
+				HeartbeatTimeout:                90,
+				UserConnTimeout:                 10,
+				HTTPPlugins:                     make(map[string]plugin.HTTPPluginOptions),
+				UDPPacketSize:                   1500,
+				NatHoleAnalysisDataReserveHours: 7 * 24,
 			},
 		},
 	}

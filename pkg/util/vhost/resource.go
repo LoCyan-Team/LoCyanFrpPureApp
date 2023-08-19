@@ -31,8 +31,8 @@ const (
 	<html>
 	<head>
 		<meta charset="UTF-8">
-		<title>无法找到你的请求的网站！</title>
-		<meta name="description" content="无法找到你的请求的网站!,请确定FRP服务已启动!">
+		<title>无法找到你所请求的网站！</title>
+		<meta name="description" content="无法找到你所请求的网站!,请确定FRP服务已正常启动!">
 		<link rel="icon" type="image/ico" href="https://tx.hk47.cc/favicon.ico">
 		<link rel="stylesheet" href="https://tx.hk47.cc/404-bootstrap.css">
 		<link rel="stylesheet" href="https://tx.hk47.cc/404-style.css">
@@ -75,7 +75,7 @@ func getNotFoundPageContent() []byte {
 
 func notFoundResponse() *http.Response {
 	header := make(http.Header)
-	header.Set("server", "frp/"+version.Full()+"-locyanfrp")
+	header.Set("server", "frp/"+version.Full())
 	header.Set("Content-Type", "text/html")
 
 	content := getNotFoundPageContent()
@@ -88,20 +88,6 @@ func notFoundResponse() *http.Response {
 		Header:        header,
 		Body:          io.NopCloser(bytes.NewReader(content)),
 		ContentLength: int64(len(content)),
-	}
-	return res
-}
-
-func noAuthResponse() *http.Response {
-	header := make(map[string][]string)
-	header["WWW-Authenticate"] = []string{`Basic realm="Restricted"`}
-	res := &http.Response{
-		Status:     "401 Not authorized",
-		StatusCode: 401,
-		Proto:      "HTTP/1.1",
-		ProtoMajor: 1,
-		ProtoMinor: 1,
-		Header:     header,
 	}
 	return res
 }

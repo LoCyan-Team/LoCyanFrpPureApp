@@ -40,12 +40,17 @@ func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err er
 
 	tr := &http.Transport{
 		// 跳过证书验证
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		DisableKeepAlives: true,
 	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
+	// 请求出现错误，resp返回nil判断
+	if resp == nil {
+		return "", err
+	}
+
 	defer resp.Body.Close()
 	if err != nil {
 		return "", err
@@ -85,12 +90,17 @@ func (s Service) CheckToken(user string, token string, timestamp int64, stk stri
 
 	tr := &http.Transport{
 		// 跳过证书验证
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		DisableKeepAlives: true,
 	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
+	// 请求出现错误，resp返回nil判断
+	if resp == nil {
+		return false, err
+	}
+
 	defer resp.Body.Close()
 	if err != nil {
 		return false, err
@@ -175,12 +185,18 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 
 	tr := &http.Transport{
 		// 跳过证书验证
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		DisableKeepAlives: true,
 	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
+
+	// 请求出现错误，resp返回nil判断
+	if resp == nil {
+		return false, err
+	}
+
 	defer resp.Body.Close()
 	if err != nil {
 		return false, err
@@ -220,12 +236,18 @@ func (s Service) GetProxyLimit(user string, timestamp int64, stk string) (inLimi
 
 	tr := &http.Transport{
 		// 跳过证书验证
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		DisableKeepAlives: true,
 	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(s.Host.String())
+
+	// 请求出现错误，resp返回nil判断
+	if resp == nil {
+		return 1280, 1280, err
+	}
+
 	defer resp.Body.Close()
 	if err != nil {
 		return 1280, 1280, err
@@ -260,7 +282,6 @@ func BoolToString(val bool) (str string) {
 		return "true"
 	}
 	return "false"
-
 }
 
 type ErrHTTPStatus struct {

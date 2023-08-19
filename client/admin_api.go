@@ -24,6 +24,9 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/samber/lo"
 
 	"github.com/fatedier/frp/client/proxy"
 	"github.com/fatedier/frp/pkg/config"
@@ -36,12 +39,12 @@ type GeneralResponse struct {
 }
 
 // /healthz
-func (svr *Service) healthz(w http.ResponseWriter, r *http.Request) {
+func (svr *Service) healthz(w http.ResponseWriter, _ *http.Request) {
 	w.WriteHeader(200)
 }
 
-// GET api/reload
-func (svr *Service) apiReload(w http.ResponseWriter, r *http.Request) {
+// GET /api/reload
+func (svr *Service) apiReload(w http.ResponseWriter, _ *http.Request) {
 	res := GeneralResponse{Code: 200}
 
 	log.Info("api request [/api/reload]")
@@ -70,15 +73,23 @@ func (svr *Service) apiReload(w http.ResponseWriter, r *http.Request) {
 	log.Info("success reload conf")
 }
 
-type StatusResp struct {
-	TCP   []ProxyStatusResp `json:"tcp"`
-	UDP   []ProxyStatusResp `json:"udp"`
-	HTTP  []ProxyStatusResp `json:"http"`
-	HTTPS []ProxyStatusResp `json:"https"`
-	STCP  []ProxyStatusResp `json:"stcp"`
-	XTCP  []ProxyStatusResp `json:"xtcp"`
-	SUDP  []ProxyStatusResp `json:"sudp"`
+// POST /api/stop
+func (svr *Service) apiStop(w http.ResponseWriter, _ *http.Request) {
+	res := GeneralResponse{Code: 200}
+
+	log.Info("api request [/api/stop]")
+	defer func() {
+		log.Info("api response [/api/stop], code [%d]", res.Code)
+		w.WriteHeader(res.Code)
+		if len(res.Msg) > 0 {
+			_, _ = w.Write([]byte(res.Msg))
+		}
+	}()
+
+	go svr.GracefulClose(100 * time.Millisecond)
 }
+
+type StatusResp map[string][]ProxyStatusResp
 
 type ProxyStatusResp struct {
 	Name       string `json:"name"`
@@ -90,12 +101,6 @@ type ProxyStatusResp struct {
 	RemoteAddr string `json:"remote_addr"`
 }
 
-type ByProxyStatusResp []ProxyStatusResp
-
-func (a ByProxyStatusResp) Len() int           { return len(a) }
-func (a ByProxyStatusResp) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
-func (a ByProxyStatusResp) Less(i, j int) bool { return strings.Compare(a[i].Name, a[j].Name) < 0 }
-
 func NewProxyStatusResp(status *proxy.WorkingStatus, serverAddr string) ProxyStatusResp {
 	psr := ProxyStatusResp{
 		Name:   status.Name,
@@ -103,70 +108,27 @@ func NewProxyStatusResp(status *proxy.WorkingStatus, serverAddr string) ProxySta
 		Status: status.Phase,
 		Err:    status.Err,
 	}
-	switch cfg := status.Cfg.(type) {
-	case *config.TCPProxyConf:
-		if cfg.LocalPort != 0 {
-			psr.LocalAddr = net.JoinHostPort(cfg.LocalIP, strconv.Itoa(cfg.LocalPort))
-		}
-		psr.Plugin = cfg.Plugin
-		if status.Err != "" {
-			psr.RemoteAddr = net.JoinHostPort(serverAddr, strconv.Itoa(cfg.RemotePort))
-		} else {
-			psr.RemoteAddr = serverAddr + status.RemoteAddr
-		}
-	case *config.UDPProxyConf:
-		if cfg.LocalPort != 0 {
-			psr.LocalAddr = net.JoinHostPort(cfg.LocalIP, strconv.Itoa(cfg.LocalPort))
-		}
-		if status.Err != "" {
-			psr.RemoteAddr = net.JoinHostPort(serverAddr, strconv.Itoa(cfg.RemotePort))
-		} else {
-			psr.RemoteAddr = serverAddr + status.RemoteAddr
-		}
-	case *config.HTTPProxyConf:
-		if cfg.LocalPort != 0 {
-			psr.LocalAddr = net.JoinHostPort(cfg.LocalIP, strconv.Itoa(cfg.LocalPort))
-		}
-		psr.Plugin = cfg.Plugin
+	baseCfg := status.Cfg.GetBaseConfig()
+	if baseCfg.LocalPort != 0 {
+		psr.LocalAddr = net.JoinHostPort(baseCfg.LocalIP, strconv.Itoa(baseCfg.LocalPort))
+	}
+	psr.Plugin = baseCfg.Plugin
+
+	if status.Err == "" {
 		psr.RemoteAddr = status.RemoteAddr
-	case *config.HTTPSProxyConf:
-		if cfg.LocalPort != 0 {
-			psr.LocalAddr = net.JoinHostPort(cfg.LocalIP, strconv.Itoa(cfg.LocalPort))
+		if lo.Contains([]string{"tcp", "udp"}, status.Type) {
+			psr.RemoteAddr = serverAddr + psr.RemoteAddr
 		}
-		psr.Plugin = cfg.Plugin
-		psr.RemoteAddr = status.RemoteAddr
-	case *config.STCPProxyConf:
-		if cfg.LocalPort != 0 {
-			psr.LocalAddr = net.JoinHostPort(cfg.LocalIP, strconv.Itoa(cfg.LocalPort))
-		}
-		psr.Plugin = cfg.Plugin
-	case *config.XTCPProxyConf:
-		if cfg.LocalPort != 0 {
-			psr.LocalAddr = net.JoinHostPort(cfg.LocalIP, strconv.Itoa(cfg.LocalPort))
-		}
-		psr.Plugin = cfg.Plugin
-	case *config.SUDPProxyConf:
-		if cfg.LocalPort != 0 {
-			psr.LocalAddr = net.JoinHostPort(cfg.LocalIP, strconv.Itoa(cfg.LocalPort))
-		}
-		psr.Plugin = cfg.Plugin
 	}
 	return psr
 }
 
-// GET api/status
-func (svr *Service) apiStatus(w http.ResponseWriter, r *http.Request) {
+// GET /api/status
+func (svr *Service) apiStatus(w http.ResponseWriter, _ *http.Request) {
 	var (
 		buf []byte
-		res StatusResp
+		res StatusResp = make(map[string][]ProxyStatusResp)
 	)
-	res.TCP = make([]ProxyStatusResp, 0)
-	res.UDP = make([]ProxyStatusResp, 0)
-	res.HTTP = make([]ProxyStatusResp, 0)
-	res.HTTPS = make([]ProxyStatusResp, 0)
-	res.STCP = make([]ProxyStatusResp, 0)
-	res.XTCP = make([]ProxyStatusResp, 0)
-	res.SUDP = make([]ProxyStatusResp, 0)
 
 	log.Info("Http request [/api/status]")
 	defer func() {
@@ -177,34 +139,21 @@ func (svr *Service) apiStatus(w http.ResponseWriter, r *http.Request) {
 
 	ps := svr.ctl.pm.GetAllProxyStatus()
 	for _, status := range ps {
-		switch status.Type {
-		case "tcp":
-			res.TCP = append(res.TCP, NewProxyStatusResp(status, svr.cfg.ServerAddr))
-		case "udp":
-			res.UDP = append(res.UDP, NewProxyStatusResp(status, svr.cfg.ServerAddr))
-		case "http":
-			res.HTTP = append(res.HTTP, NewProxyStatusResp(status, svr.cfg.ServerAddr))
-		case "https":
-			res.HTTPS = append(res.HTTPS, NewProxyStatusResp(status, svr.cfg.ServerAddr))
-		case "stcp":
-			res.STCP = append(res.STCP, NewProxyStatusResp(status, svr.cfg.ServerAddr))
-		case "xtcp":
-			res.XTCP = append(res.XTCP, NewProxyStatusResp(status, svr.cfg.ServerAddr))
-		case "sudp":
-			res.SUDP = append(res.SUDP, NewProxyStatusResp(status, svr.cfg.ServerAddr))
-		}
+		res[status.Type] = append(res[status.Type], NewProxyStatusResp(status, svr.cfg.ServerAddr))
 	}
-	sort.Sort(ByProxyStatusResp(res.TCP))
-	sort.Sort(ByProxyStatusResp(res.UDP))
-	sort.Sort(ByProxyStatusResp(res.HTTP))
-	sort.Sort(ByProxyStatusResp(res.HTTPS))
-	sort.Sort(ByProxyStatusResp(res.STCP))
-	sort.Sort(ByProxyStatusResp(res.XTCP))
-	sort.Sort(ByProxyStatusResp(res.SUDP))
+
+	for _, arrs := range res {
+		if len(arrs) <= 1 {
+			continue
+		}
+		sort.Slice(arrs, func(i, j int) bool {
+			return strings.Compare(arrs[i].Name, arrs[j].Name) < 0
+		})
+	}
 }
 
-// GET api/config
-func (svr *Service) apiGetConfig(w http.ResponseWriter, r *http.Request) {
+// GET /api/config
+func (svr *Service) apiGetConfig(w http.ResponseWriter, _ *http.Request) {
 	res := GeneralResponse{Code: 200}
 
 	log.Info("Http get request [/api/config]")
@@ -243,7 +192,7 @@ func (svr *Service) apiGetConfig(w http.ResponseWriter, r *http.Request) {
 	res.Msg = strings.Join(newRows, "\n")
 }
 
-// PUT api/config
+// PUT /api/config
 func (svr *Service) apiPutConfig(w http.ResponseWriter, r *http.Request) {
 	res := GeneralResponse{Code: 200}
 

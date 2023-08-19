@@ -21,7 +21,7 @@ import (
 
 	gosocks5 "github.com/armon/go-socks5"
 
-	frpNet "github.com/fatedier/frp/pkg/util/net"
+	utilnet "github.com/fatedier/frp/pkg/util/net"
 )
 
 const PluginSocks5 = "socks5"
@@ -50,9 +50,9 @@ func NewSocks5Plugin(params map[string]string) (p Plugin, err error) {
 	return
 }
 
-func (sp *Socks5Plugin) Handle(conn io.ReadWriteCloser, realConn net.Conn, extraBufToLocal []byte) {
+func (sp *Socks5Plugin) Handle(conn io.ReadWriteCloser, realConn net.Conn, _ []byte) {
 	defer conn.Close()
-	wrapConn := frpNet.WrapReadWriteCloserToConn(conn, realConn)
+	wrapConn := utilnet.WrapReadWriteCloserToConn(conn, realConn)
 	_ = sp.Server.ServeConn(wrapConn)
 }
 

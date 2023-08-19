@@ -3,8 +3,9 @@ package basic
 import (
 	"fmt"
 	"strings"
+	"time"
 
-	"github.com/onsi/ginkgo"
+	"github.com/onsi/ginkgo/v2"
 
 	"github.com/fatedier/frp/test/e2e/framework"
 	"github.com/fatedier/frp/test/e2e/framework/consts"
@@ -13,9 +14,13 @@ import (
 )
 
 type generalTestConfigures struct {
-	server      string
-	client      string
-	expectError bool
+	server        string
+	client        string
+	clientPrefix  string
+	client2       string
+	client2Prefix string
+	testDelay     time.Duration
+	expectError   bool
 }
 
 func renderBindPortConfig(protocol string) string {
@@ -30,6 +35,9 @@ func renderBindPortConfig(protocol string) string {
 func runClientServerTest(f *framework.Framework, configures *generalTestConfigures) {
 	serverConf := consts.DefaultServerConfig
 	clientConf := consts.DefaultClientConfig
+	if configures.clientPrefix != "" {
+		clientConf = configures.clientPrefix
+	}
 
 	serverConf += fmt.Sprintf(`
 				%s
@@ -54,7 +62,23 @@ func runClientServerTest(f *framework.Framework, configures *generalTestConfigur
 		framework.UDPEchoServerPort, udpPortName,
 	)
 
-	f.RunProcesses([]string{serverConf}, []string{clientConf})
+	clientConfs := []string{clientConf}
+	if configures.client2 != "" {
+		client2Conf := consts.DefaultClientConfig
+		if configures.client2Prefix != "" {
+			client2Conf = configures.client2Prefix
+		}
+		client2Conf += fmt.Sprintf(`
+			%s
+		`, configures.client2)
+		clientConfs = append(clientConfs, client2Conf)
+	}
+
+	f.RunProcesses([]string{serverConf}, clientConfs)
+
+	if configures.testDelay > 0 {
+		time.Sleep(configures.testDelay)
+	}
 
 	framework.NewRequestExpect(f).PortName(tcpPortName).ExpectError(configures.expectError).Explain("tcp proxy").Ensure()
 	framework.NewRequestExpect(f).Protocol("udp").
@@ -84,6 +108,33 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 		}
 	})
 
+	// wss is special, it needs to be tested separately.
+	// frps only supports ws, so there should be a proxy to terminate TLS before frps.
+	ginkgo.Describe("Protocol wss", func() {
+		wssPort := f.AllocPort()
+		configures := &generalTestConfigures{
+			clientPrefix: fmt.Sprintf(`
+				[common]
+				server_addr = 127.0.0.1
+				server_port = %d
+				protocol = wss
+				log_level = trace
+				login_fail_exit = false
+			`, wssPort),
+			// Due to the fact that frps cannot directly accept wss connections, we use the https2http plugin of another frpc to terminate TLS.
+			client2: fmt.Sprintf(`
+				[wss2ws]
+				type = tcp
+				remote_port = %d
+				plugin = https2http
+				plugin_local_addr = 127.0.0.1:{{ .%s }}
+			`, wssPort, consts.PortServerName),
+			testDelay: 10 * time.Second,
+		}
+
+		defineClientServerTest("wss", f, configures)
+	})
+
 	ginkgo.Describe("Authentication", func() {
 		defineClientServerTest("Token Correct", f, &generalTestConfigures{
 			server: "token = 123456",
@@ -101,11 +152,13 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 		supportProtocols := []string{"tcp", "kcp", "quic", "websocket"}
 		for _, protocol := range supportProtocols {
 			tmp := protocol
-			defineClientServerTest("TLS over "+strings.ToUpper(tmp), f, &generalTestConfigures{
+			// Since v0.50.0, the default value of tls_enable has been changed to true.
+			// Therefore, here it needs to be set as false to test the scenario of turning it off.
+			defineClientServerTest("Disable TLS over "+strings.ToUpper(tmp), f, &generalTestConfigures{
 				server: fmt.Sprintf(`
 				%s
 				`, renderBindPortConfig(protocol)),
-				client: fmt.Sprintf(`tls_enable = true
+				client: fmt.Sprintf(`tls_enable = false
 				protocol = %s
 				`, protocol),
 			})
@@ -113,10 +166,10 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 
 		defineClientServerTest("enable tls_only, client with TLS", f, &generalTestConfigures{
 			server: "tls_only = true",
-			client: "tls_enable = true",
 		})
 		defineClientServerTest("enable tls_only, client without TLS", f, &generalTestConfigures{
 			server:      "tls_only = true",
+			client:      "tls_enable = false",
 			expectError: true,
 		})
 	})
@@ -155,7 +208,6 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 					`, renderBindPortConfig(tmp), caCrtPath),
 					client: fmt.Sprintf(`
 						protocol = %s
-						tls_enable = true
 						tls_cert_file = %s
 						tls_key_file = %s
 					`, tmp, clientCrtPath, clientKeyPath),
@@ -172,7 +224,6 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 					`, renderBindPortConfig(tmp), serverCrtPath, serverKeyPath, caCrtPath),
 					client: fmt.Sprintf(`
 						protocol = %s
-						tls_enable = true
 						tls_cert_file = %s
 						tls_key_file = %s
 						tls_trusted_ca_file = %s
@@ -211,7 +262,6 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 				tls_trusted_ca_file = %s
 				`, serverCrtPath, serverKeyPath, caCrtPath),
 				client: fmt.Sprintf(`
-				tls_enable = true
 				tls_server_name = example.com
 				tls_cert_file = %s
 				tls_key_file = %s
@@ -228,7 +278,6 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 				tls_trusted_ca_file = %s
 				`, serverCrtPath, serverKeyPath, caCrtPath),
 				client: fmt.Sprintf(`
-				tls_enable = true
 				tls_server_name = invalid.com
 				tls_cert_file = %s
 				tls_key_file = %s
@@ -239,7 +288,7 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 		})
 	})
 
-	ginkgo.Describe("TLS with disable_custom_tls_first_byte", func() {
+	ginkgo.Describe("TLS with disable_custom_tls_first_byte set to false", func() {
 		supportProtocols := []string{"tcp", "kcp", "quic", "websocket"}
 		for _, protocol := range supportProtocols {
 			tmp := protocol
@@ -248,9 +297,8 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 					%s
 					`, renderBindPortConfig(protocol)),
 				client: fmt.Sprintf(`
-					tls_enable = true
 					protocol = %s
-					disable_custom_tls_first_byte = true
+					disable_custom_tls_first_byte = false
 					`, protocol),
 			})
 		}
@@ -266,9 +314,7 @@ var _ = ginkgo.Describe("[Feature: Client-Server]", func() {
 					%s
 					`, renderBindPortConfig(protocol)),
 				client: fmt.Sprintf(`
-					tls_enable = true
 					protocol = %s
-					disable_custom_tls_first_byte = true
 					`, protocol),
 			})
 		}
