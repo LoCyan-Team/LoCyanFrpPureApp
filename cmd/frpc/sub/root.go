@@ -24,11 +24,12 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
-	"sync"
 	"syscall"
 	"time"
 
 	"github.com/spf13/cobra"
+
+	"github.com/sourcegraph/conc"
 
 	"github.com/fatedier/frp/client"
 	"github.com/fatedier/frp/pkg/api"
@@ -116,8 +117,9 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		log.Info("欢迎使用LoCyanFrp映射客户端! v0.51.0 #20230710001")
-		var wg sync.WaitGroup
+		log.Info("欢迎使用LoCyanFrp映射客户端! v0.51.3 #20230710001")
+		var wg conc.WaitGroup
+		defer wg.Wait()
 
 		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
 		// Note that it's only designed for testing. It's not guaranteed to be stable.
@@ -143,44 +145,42 @@ var rootCmd = &cobra.Command{
 			}
 
 			if len(ids) > 1 {
-				for i := 0; i < len(ids); i++ {
-					// 每一个都是新的协程
-					wg.Add(1)
-					id := ids[i]
-					go func(id string) {
-						defer wg.Done()
-						// != -1 -> 存在多开
-						if strings.Contains(cfgProxyid, ",") {
-							cfg, err := s.EZStartGetCfg(cfgToken, id)
-							if err != nil {
-								log.Warn("Get Config File Failed, Please Check Your Args, err: %s", err)
-								// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
-								os.Exit(1)
-							}
+				// 每一个都是新的协程
+				for _, id := range ids {
 
-							file, err := os.OpenFile("./ini/"+id+".ini", os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0777)
-							if err != nil {
-								log.Warn("Open File Failed, Err: %s", err)
-								os.Exit(1)
-							}
-							defer file.Close()
-							str := cfg
-							_, err = file.WriteString(str) //直接写入字符串数据
-							// 写入文件是否成功检测
-							if err != nil {
-								log.Warn("文本在写入的过程中发生了致命错误, Err: %s", err)
-								os.Exit(1)
-							}
+					// 将循环变量赋值给局部变量
+					idCopy := id
 
-							// 内容写入后直接启动
-							fliePath := "./ini/" + id + ".ini"
-							err4 := runClient(fliePath, &wg)
-							if err4 != nil {
-								log.Warn("启动的过程中发生致命错误, Err: %s", err4)
-								os.Exit(1)
-							}
+					wg.Go(func() {
+						fliePath := "./ini/" + idCopy + ".ini"
+						cfg, err := s.EZStartGetCfg(cfgToken, idCopy)
+						if err != nil {
+							log.Warn("Get Config File Failed, Please Check Your Args, err: %s", err)
+							// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
+							os.Exit(1)
 						}
-					}(id)
+
+						file, err := os.OpenFile(fliePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0777)
+						if err != nil {
+							log.Warn("Open File Failed, Err: %s", err)
+							os.Exit(1)
+						}
+						defer file.Close()
+						str := cfg
+						_, err = file.WriteString(str) //直接写入字符串数据
+						// 写入文件是否成功检测
+						if err != nil {
+							log.Warn("文本在写入的过程中发生了致命错误, Err: %s", err)
+							os.Exit(1)
+						}
+
+						// 内容写入后直接启动
+						err4 := runClient(fliePath, &wg)
+						if err4 != nil {
+							log.Warn("启动的过程中发生致命错误, Err: %s", err4)
+							os.Exit(1)
+						}
+					})
 				}
 				wg.Wait()
 				return nil
@@ -232,23 +232,21 @@ var rootCmd = &cobra.Command{
 }
 
 func runMultipleClients(cfgDir string) error {
-	var wg sync.WaitGroup
+	var wg conc.WaitGroup
+	defer wg.Wait()
 	err := filepath.WalkDir(cfgDir, func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() {
 			return nil
 		}
-		wg.Add(1)
 		time.Sleep(time.Millisecond)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			err := runClient(path, &wg)
 			if err != nil {
 				fmt.Printf("frpc service error for config file [%s]\n", path)
 			}
-		}()
+		})
 		return nil
 	})
-	wg.Wait()
 	return err
 }
 
@@ -303,8 +301,7 @@ func parseClientCommonCfgFromCmd() (cfg config.ClientCommonConf, err error) {
 	return
 }
 
-func runClient(cfgFilePath string, wg *sync.WaitGroup) error {
-	defer wg.Done()
+func runClient(cfgFilePath string, wg *conc.WaitGroup) error {
 	cfg, pxyCfgs, visitorCfgs, err := config.ParseClientConfig(cfgFilePath)
 	if err != nil {
 		fmt.Println(err)
