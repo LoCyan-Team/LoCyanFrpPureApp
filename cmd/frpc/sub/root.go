@@ -152,7 +152,7 @@ var rootCmd = &cobra.Command{
 					idCopy := id
 
 					wg.Go(func() {
-						fliePath := "./ini/" + idCopy + ".ini"
+						filePath := "./ini/" + idCopy + ".ini"
 						cfg, err := s.EZStartGetCfg(cfgToken, idCopy)
 						if err != nil {
 							log.Warn("Get Config File Failed, Please Check Your Args, err: %s", err)
@@ -160,14 +160,14 @@ var rootCmd = &cobra.Command{
 							os.Exit(1)
 						}
 
-						file, err := os.OpenFile(fliePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0777)
+						file, err := os.OpenFile(filePath, os.O_RDWR|os.O_TRUNC|os.O_CREATE, 0777)
 						if err != nil {
 							log.Warn("Open File Failed, Err: %s", err)
 							os.Exit(1)
 						}
 						defer file.Close()
 						str := cfg
-						_, err = file.WriteString(str) //直接写入字符串数据
+						_, err = file.WriteString(str) // 直接写入字符串数据
 						// 写入文件是否成功检测
 						if err != nil {
 							log.Warn("文本在写入的过程中发生了致命错误, Err: %s", err)
@@ -175,7 +175,7 @@ var rootCmd = &cobra.Command{
 						}
 
 						// 内容写入后直接启动
-						err4 := runClient(fliePath, &wg)
+						err4 := runClient(filePath, &wg)
 						if err4 != nil {
 							log.Warn("启动的过程中发生致命错误, Err: %s", err4)
 							os.Exit(1)
@@ -204,7 +204,7 @@ var rootCmd = &cobra.Command{
 				log.Warn("Open File Failed, Err: %s", err2)
 			}
 			str := cfg
-			num, err3 := file.WriteString(str) //直接写入字符串数据
+			num, err3 := file.WriteString(str) // 直接写入字符串数据
 			// 写入文件是否成功检测
 			if err3 != nil {
 				log.Warn("文本在写入的过程中发生了致命错误, Err: %s", err3)
