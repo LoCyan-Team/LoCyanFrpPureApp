@@ -349,7 +349,7 @@ func (svr *Service) APIProxyTraffic(w http.ResponseWriter, r *http.Request) {
 type CloseUserResp struct {
 	Status int    `json:"status"`
 	Msg    string `json:"message"`
-	runID  string `json:"runid"`
+	RunID  string `json:"runid"`
 }
 
 func (svr *Service) APICloseClient(w http.ResponseWriter, r *http.Request) {
@@ -367,12 +367,13 @@ func (svr *Service) APICloseClient(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		resp.Status = 404
 		resp.Msg = err.Error()
-		resp.runID = "nan"
+		resp.RunID = "nan"
 	} else {
 		resp.Status = 200
 		resp.Msg = "OK"
-		resp.runID = user
+		resp.RunID = user
 	}
 	buf, _ = json.Marshal(&resp)
-	w.Write(buf)
+
+	_, _ = w.Write(buf)
 }

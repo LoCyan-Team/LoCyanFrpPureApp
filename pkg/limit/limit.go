@@ -18,6 +18,7 @@ const (
 
 const BurstLimit = 1024 * 1024 * 1024
 
+// nolint:revive // I'm not sure why the origin author designed this interface this way.
 type LimitConn struct {
 	utilnet.Conn
 

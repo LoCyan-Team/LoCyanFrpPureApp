@@ -26,9 +26,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/spf13/cobra"
-
 	"github.com/sourcegraph/conc"
+	"github.com/spf13/cobra"
 
 	"github.com/fatedier/frp/client"
 	"github.com/fatedier/frp/pkg/api"
@@ -127,7 +126,6 @@ var rootCmd = &cobra.Command{
 
 		log.Info("To Get Config File from LoCyanFrp API...")
 		s, err := api.NewService("https://www.locyanfrp.cn/api/")
-
 		if err != nil {
 			log.Warn("Initialize API Service Failed, err: %s", err)
 		}
