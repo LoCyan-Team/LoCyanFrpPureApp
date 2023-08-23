@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -61,7 +61,7 @@ func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err er
 			Text:   resp.Status,
 		}
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
@@ -111,7 +111,7 @@ func (s Service) CheckToken(user string, token string, timestamp int64, stk stri
 			Text:   resp.Status,
 		}
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, err
 	}
@@ -127,7 +127,6 @@ func (s Service) CheckToken(user string, token string, timestamp int64, stk stri
 
 // CheckProxy 校验客户端代理
 func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, stk string) (ok bool, err error) {
-
 	domains, err := json.Marshal(pMsg.CustomDomains)
 	if err != nil {
 		return false, err
@@ -207,7 +206,7 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 			Text:   resp.Status,
 		}
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, err
 	}
@@ -255,7 +254,7 @@ func (s Service) GetProxyLimit(user string, timestamp int64, stk string) (inLimi
 	if resp.StatusCode != http.StatusOK {
 		return 1280, 1280, err
 	}
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return 1280, 1280, err
 	}

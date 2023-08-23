@@ -558,11 +558,11 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 		outLimit uint64
 	)
 
-	if svr.cfg.EnableApi {
+	if svr.cfg.EnableAPI {
 
 		nowTime := time.Now().Unix()
 
-		s, err := api.NewService(svr.cfg.ApiBaseUrl)
+		s, err := api.NewService(svr.cfg.APIBaseURL)
 		if err != nil {
 			return err
 		}
@@ -575,8 +575,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 		}
 
 		// Connect to API server and verify the user.
-		valid, err := s.CheckToken(loginMsg.User, loginMsg.PrivilegeKey, nowTime, svr.cfg.ApiToken)
-
+		valid, err := s.CheckToken(loginMsg.User, loginMsg.PrivilegeKey, nowTime, svr.cfg.APIToken)
 		if err != nil {
 			return err
 		}
@@ -585,7 +584,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 			return fmt.Errorf("authorization failed")
 		}
 
-		inLimit, outLimit, err = s.GetProxyLimit(loginMsg.User, nowTime, svr.cfg.ApiToken)
+		inLimit, outLimit, err = s.GetProxyLimit(loginMsg.User, nowTime, svr.cfg.APIToken)
 		if err != nil {
 			return err
 		}
