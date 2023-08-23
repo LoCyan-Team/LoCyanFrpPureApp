@@ -25,12 +25,10 @@ import (
 	"time"
 
 	libio "github.com/fatedier/golib/io"
-	"golang.org/x/time/rate"
 
 	"github.com/fatedier/frp/pkg/config"
 	"github.com/fatedier/frp/pkg/msg"
 	plugin "github.com/fatedier/frp/pkg/plugin/server"
-	"github.com/fatedier/frp/pkg/util/limit"
 	utilnet "github.com/fatedier/frp/pkg/util/net"
 	"github.com/fatedier/frp/pkg/util/xlog"
 	"github.com/fatedier/frp/server/controller"
@@ -54,7 +52,6 @@ type Proxy interface {
 	GetUsedPortsNum() int
 	GetResourceController() *controller.ResourceController
 	GetUserInfo() plugin.UserInfo
-	GetLimiter() *rate.Limiter
 	GetLoginMsg() *msg.Login
 	Close()
 }
@@ -67,7 +64,6 @@ type BaseProxy struct {
 	poolCount     int
 	getWorkConnFn GetWorkConnFn
 	serverCfg     config.ServerCommonConf
-	limiter       *rate.Limiter
 	userInfo      plugin.UserInfo
 	loginMsg      *msg.Login
 	pxyConf       config.ProxyConf
@@ -99,10 +95,6 @@ func (pxy *BaseProxy) GetUserInfo() plugin.UserInfo {
 
 func (pxy *BaseProxy) GetLoginMsg() *msg.Login {
 	return pxy.loginMsg
-}
-
-func (pxy *BaseProxy) GetLimiter() *rate.Limiter {
-	return pxy.limiter
 }
 
 func (pxy *BaseProxy) Close() {
@@ -246,12 +238,6 @@ func (pxy *BaseProxy) handleUserTCPConnection(userConn net.Conn) {
 		defer recycleFn()
 	}
 
-	if pxy.GetLimiter() != nil {
-		local = libio.WrapReadWriteCloser(limit.NewReader(local, pxy.GetLimiter()), limit.NewWriter(local, pxy.GetLimiter()), func() error {
-			return local.Close()
-		})
-	}
-
 	xl.Debug("join connections, workConn(l[%s] r[%s]) userConn(l[%s] r[%s])", workConn.LocalAddr().String(),
 		workConn.RemoteAddr().String(), userConn.LocalAddr().String(), userConn.RemoteAddr().String())
 
@@ -270,12 +256,6 @@ func NewProxy(ctx context.Context, userInfo plugin.UserInfo, rc *controller.Reso
 ) (pxy Proxy, err error) {
 	xl := xlog.FromContextSafe(ctx).Spawn().AppendPrefix(pxyConf.GetBaseConfig().ProxyName)
 
-	var limiter *rate.Limiter
-	limitBytes := pxyConf.GetBaseConfig().BandwidthLimit.Bytes()
-	if limitBytes > 0 && pxyConf.GetBaseConfig().BandwidthLimitMode == config.BandwidthLimitModeServer {
-		limiter = rate.NewLimiter(rate.Limit(float64(limitBytes)), int(limitBytes))
-	}
-
 	basePxy := BaseProxy{
 		name:          pxyConf.GetBaseConfig().ProxyName,
 		rc:            rc,
@@ -283,7 +263,6 @@ func NewProxy(ctx context.Context, userInfo plugin.UserInfo, rc *controller.Reso
 		poolCount:     poolCount,
 		getWorkConnFn: getWorkConnFn,
 		serverCfg:     serverCfg,
-		limiter:       limiter,
 		xl:            xl,
 		ctx:           xlog.NewContext(ctx, xl),
 		userInfo:      userInfo,

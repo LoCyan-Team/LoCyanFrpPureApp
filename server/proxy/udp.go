@@ -29,7 +29,6 @@ import (
 	"github.com/fatedier/frp/pkg/config"
 	"github.com/fatedier/frp/pkg/msg"
 	"github.com/fatedier/frp/pkg/proto/udp"
-	"github.com/fatedier/frp/pkg/util/limit"
 	utilnet "github.com/fatedier/frp/pkg/util/net"
 	"github.com/fatedier/frp/server/metrics"
 )
@@ -214,12 +213,6 @@ func (pxy *UDPProxy) Run() (remoteAddr string, err error) {
 			}
 			if pxy.cfg.UseCompression {
 				rwc = libio.WithCompression(rwc)
-			}
-
-			if pxy.GetLimiter() != nil {
-				rwc = libio.WrapReadWriteCloser(limit.NewReader(rwc, pxy.GetLimiter()), limit.NewWriter(rwc, pxy.GetLimiter()), func() error {
-					return rwc.Close()
-				})
 			}
 
 			pxy.workConn = utilnet.WrapReadWriteCloserToConn(rwc, workConn)

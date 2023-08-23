@@ -23,7 +23,6 @@ import (
 	libio "github.com/fatedier/golib/io"
 
 	"github.com/fatedier/frp/pkg/config"
-	"github.com/fatedier/frp/pkg/util/limit"
 	utilnet "github.com/fatedier/frp/pkg/util/net"
 	"github.com/fatedier/frp/pkg/util/util"
 	"github.com/fatedier/frp/pkg/util/vhost"
@@ -176,12 +175,6 @@ func (pxy *HTTPProxy) GetRealConn(remoteAddr string) (workConn net.Conn, err err
 	}
 	if pxy.cfg.UseCompression {
 		rwc = libio.WithCompression(rwc)
-	}
-
-	if pxy.GetLimiter() != nil {
-		rwc = libio.WrapReadWriteCloser(limit.NewReader(rwc, pxy.GetLimiter()), limit.NewWriter(rwc, pxy.GetLimiter()), func() error {
-			return rwc.Close()
-		})
 	}
 
 	workConn = utilnet.WrapReadWriteCloserToConn(rwc, tmpConn)
