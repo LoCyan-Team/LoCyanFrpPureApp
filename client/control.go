@@ -169,7 +169,14 @@ func (ctl *Control) HandleNewProxyResp(inMsg *msg.NewProxyResp) {
 	if err != nil {
 		xl.Warn("[%s] 启动失败: %v", inMsg.ProxyName, err)
 	} else {
-		xl.Info("[%s] 映射启动成功, 感谢您使用LCF!", inMsg.ProxyName)
+		// http(s) 隧道规则
+		if ctl.pxyCfgs[inMsg.ProxyName].GetBaseConfig().ProxyType == "https" || ctl.pxyCfgs[inMsg.ProxyName].GetBaseConfig().ProxyType == "http" {
+			xl.Info("[%s] 映射启动成功, 感谢您使用LCF!", inMsg.ProxyName)
+			xl.Info("你可以使用 [%s] 连接至您的隧道: %s", inMsg.RemoteAddr, inMsg.ProxyName)
+		} else {
+			xl.Info("[%s] 映射启动成功, 感谢您使用LCF!", inMsg.ProxyName)
+			xl.Info("你可以使用 [%s] 连接至您的隧道: %s", ctl.clientCfg.ServerAddr+inMsg.RemoteAddr, inMsg.ProxyName)
+		}
 	}
 }
 

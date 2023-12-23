@@ -147,6 +147,6 @@ func (pm *Manager) Reload(pxyCfgs map[string]config.ProxyConf) {
 		}
 	}
 	if len(addPxyNames) > 0 {
-		xl.Info("proxy added: %s", addPxyNames)
+		xl.Info("添加隧道: %s", addPxyNames)
 	}
 }

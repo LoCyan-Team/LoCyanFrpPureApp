@@ -115,7 +115,7 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		log.Info("欢迎使用LoCyanFrp映射客户端! v0.51.3 #20230823")
+		log.Info("欢迎使用LoCyanFrp, Stable Version: v0.51.3 - #2023121601")
 
 		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
 		// Note that it's only designed for testing. It's not guaranteed to be stable.
@@ -134,6 +134,22 @@ var rootCmd = &cobra.Command{
 			if len(cfgProxyIDs) > 1 {
 				var wg conc.WaitGroup
 
+				// 新建配置文件文件夹
+				iniDir := "./ini"
+
+				_, err := os.Stat(iniDir)
+				if err == nil {
+				} else if os.IsNotExist(err) {
+					err := os.Mkdir(iniDir, os.ModePerm)
+					if err != nil {
+						log.Error("Make ini folder failed: %s", err)
+						os.Exit(1)
+					}
+				} else {
+					log.Error("Make ini folder failed: %s", err)
+					os.Exit(1)
+				}
+
 				// 每一个都是新的协程
 				for _, proxyID := range cfgProxyIDs {
 					// 将循环变量赋值给局部变量
@@ -150,7 +166,7 @@ var rootCmd = &cobra.Command{
 							os.Exit(1)
 						}
 
-						log.Debug("Loading proxy config file: %s", configPath)
+						// log.Debug("Loading proxy config file: %s", configPath)
 
 						configFile, err := os.OpenFile(configPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 						if err != nil {
@@ -203,7 +219,12 @@ var rootCmd = &cobra.Command{
 				os.Exit(1)
 			}
 
-			defer file.Close()
+			defer func(file *os.File) {
+				err := file.Close()
+				if err != nil {
+					log.Error("Cant close file: %s", err)
+				}
+			}(file)
 
 			if _, err := file.WriteString(cfg); err != nil {
 				log.Error("Cant write content to config file: %s", err)
@@ -319,8 +340,8 @@ func startService(
 		cfg.LogMaxDays, cfg.DisableLogColor)
 
 	if cfgFile != "" {
-		log.Info("start frpc service for config file [%s]", cfgFile)
-		defer log.Info("frpc service for config file [%s] stopped", cfgFile)
+		log.Debug("Loading proxy config file: %s", cfgFile)
+		defer log.Debug("stopping proxy config file: %s", cfgFile)
 	}
 	svr, errRet := client.NewService(cfg, pxyCfgs, visitorCfgs, cfgFile)
 	if errRet != nil {
