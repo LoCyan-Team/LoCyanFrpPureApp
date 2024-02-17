@@ -75,6 +75,36 @@ func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err er
 	return response.Cfg, nil
 }
 
+// 提交runID至服务器
+func (s Service) SubmitRunId(stk string, pMsg *msg.NewProxy, runId string) (err error) {
+	values := url.Values{}
+	values.Set("run_id", runId)
+	// user frpToken
+	values.Set("proxy_name", pMsg.ProxyName)
+	values.Set("apitoken", stk)
+	s.Host.RawQuery = values.Encode()
+	defer func(u *url.URL) {
+		u.RawQuery = ""
+	}(&s.Host)
+
+	tr := &http.Transport{
+		// 跳过证书验证
+		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
+		DisableKeepAlives: true,
+	}
+	client := &http.Client{Transport: tr}
+
+	resp, err := client.Get(s.Host.String())
+	// 请求出现错误，resp返回nil判断
+	if resp == nil {
+		return err
+	}
+
+	// 提交就完事了管他那么多干什么
+	defer resp.Body.Close()
+	return err
+}
+
 // CheckToken 校验客户端 token
 func (s Service) CheckToken(user string, token string, timestamp int64, stk string) (ok bool, err error) {
 	values := url.Values{}
@@ -242,12 +272,13 @@ func (s Service) GetProxyLimit(user string, timestamp int64, stk string) (inLimi
 
 	resp, err := client.Get(s.Host.String())
 
+	defer resp.Body.Close()
+
 	// 请求出现错误，resp返回nil判断
 	if resp == nil {
 		return 1280, 1280, err
 	}
 
-	defer resp.Body.Close()
 	if err != nil {
 		return 1280, 1280, err
 	}
