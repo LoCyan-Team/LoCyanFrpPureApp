@@ -115,7 +115,7 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		log.Info("欢迎使用LoCyanFrp, Stable Version: v0.51.3 - #2023121601")
+		log.Info("欢迎使用LoCyanFrp, Stable Version: v0.51.3 - #2024021801")
 
 		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
 		// Note that it's only designed for testing. It's not guaranteed to be stable.
@@ -124,7 +124,6 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		log.Info("To Get Config File from LoCyanFrp API...")
 		s, err := api.NewService("https://www.locyanfrp.cn/api/")
 		if err != nil {
 			log.Warn("Initialize API Service Failed, err: %s", err)
@@ -132,6 +131,7 @@ var rootCmd = &cobra.Command{
 
 		if cfgToken != "" && len(cfgProxyIDs) > 0 {
 			if len(cfgProxyIDs) > 1 {
+				log.Info("To Get Config File from LoCyanFrp API...")
 				var wg conc.WaitGroup
 
 				// 新建配置文件文件夹
