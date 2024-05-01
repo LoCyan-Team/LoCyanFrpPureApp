@@ -124,7 +124,7 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		s, err := api.NewService("https://www.locyanfrp.cn/api/")
+		s, err := api.NewService("https://lcf-frps-api.locyanfrp.cn/api/")
 		if err != nil {
 			log.Warn("Initialize API Service Failed, err: %s", err)
 		}
