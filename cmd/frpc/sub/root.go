@@ -115,7 +115,7 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		log.Info("欢迎使用LoCyanFrp, Stable Version: v0.51.3 - #2024021801")
+		log.Info("欢迎使用 LoCyanFrp, Stable Version: v0.51.3 - #2024082401")
 
 		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
 		// Note that it's only designed for testing. It's not guaranteed to be stable.

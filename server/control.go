@@ -100,6 +100,20 @@ func (cm *ControlManager) SearchByID(runID string) (ctl *Control, ok bool) {
 	return
 }
 
+func (cm *ControlManager) SearchByProxyRunID(runID string) (ctl *Control, ok bool) {
+	cm.mu.RLock()
+	defer cm.mu.RUnlock()
+	for k, v := range cm.ctlsByRunID {
+		if strings.Contains(k, runID) {
+			if v == nil {
+				return
+			}
+			ctl, ok = cm.ctlsByRunID[k]
+		}
+	}
+	return
+}
+
 func (cm *ControlManager) Close() error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()

@@ -18,7 +18,9 @@ import (
 	"context"
 	"io"
 	"net"
+	"os"
 	"runtime/debug"
+	"strings"
 	"time"
 
 	"github.com/fatedier/golib/control/shutdown"
@@ -172,10 +174,10 @@ func (ctl *Control) HandleNewProxyResp(inMsg *msg.NewProxyResp) {
 		// http(s) 隧道规则
 		if ctl.pxyCfgs[inMsg.ProxyName].GetBaseConfig().ProxyType == "https" || ctl.pxyCfgs[inMsg.ProxyName].GetBaseConfig().ProxyType == "http" {
 			xl.Info("[%s] 映射启动成功, 感谢您使用LCF!", inMsg.ProxyName)
-			xl.Info("你可以使用 [%s] 连接至您的隧道: %s", inMsg.RemoteAddr, inMsg.ProxyName)
+			xl.Info("您可以使用 [%s] 连接至您的隧道: %s", inMsg.RemoteAddr, strings.Split(inMsg.ProxyName, ".")[1])
 		} else {
 			xl.Info("[%s] 映射启动成功, 感谢您使用LCF!", inMsg.ProxyName)
-			xl.Info("你可以使用 [%s] 连接至您的隧道: %s", ctl.clientCfg.ServerAddr+inMsg.RemoteAddr, inMsg.ProxyName)
+			xl.Info("您可以使用 [%s] 连接至您的隧道: %s", ctl.clientCfg.ServerAddr+inMsg.RemoteAddr, strings.Split(inMsg.ProxyName, ".")[1])
 		}
 	}
 }
@@ -326,6 +328,8 @@ func (ctl *Control) msgHandler() {
 				ctl.HandleNewProxyResp(m)
 			case *msg.NatHoleResp:
 				ctl.HandleNatHoleResp(m)
+			case *msg.CloseClient:
+				ctl.HandleCloseClient(m)
 			case *msg.Pong:
 				if m.Error != "" {
 					xl.Error("Pong contains error: %s", m.Error)
@@ -337,6 +341,16 @@ func (ctl *Control) msgHandler() {
 			}
 		}
 	}
+}
+
+func (ctl *Control) HandleCloseClient(ClientInfo *msg.CloseClient) {
+	xl := ctl.xl
+	if ClientInfo.Token != ctl.clientCfg.User {
+		xl.Warn("客户端 User 与传递的 User 不符")
+		return
+	}
+	xl.Info("您的客户端已被服务端强制下线")
+	os.Exit(0)
 }
 
 // If controler is notified by closedCh, reader and writer and handler will exit

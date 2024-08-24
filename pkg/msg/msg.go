@@ -25,6 +25,7 @@ const (
 	TypeNewProxy           = 'p'
 	TypeNewProxyResp       = '2'
 	TypeCloseProxy         = 'c'
+	TypeCloseClient        = 'd'
 	TypeNewWorkConn        = 'w'
 	TypeReqWorkConn        = 'r'
 	TypeStartWorkConn      = 's'
@@ -46,6 +47,7 @@ var msgTypeMap = map[byte]interface{}{
 	TypeNewProxy:           NewProxy{},
 	TypeNewProxyResp:       NewProxyResp{},
 	TypeCloseProxy:         CloseProxy{},
+	TypeCloseClient:        CloseClient{},
 	TypeNewWorkConn:        NewWorkConn{},
 	TypeReqWorkConn:        ReqWorkConn{},
 	TypeStartWorkConn:      StartWorkConn{},
@@ -229,4 +231,8 @@ type NatHoleSid struct {
 type NatHoleReport struct {
 	Sid     string `json:"sid,omitempty"`
 	Success bool   `json:"success,omitempty"`
+}
+
+type CloseClient struct {
+	Token string `json:"token,omitempty"`
 }

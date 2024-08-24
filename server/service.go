@@ -656,8 +656,19 @@ func (svr *Service) RegisterVisitorConn(visitorConn net.Conn, newMsg *msg.NewVis
 		newMsg.UseEncryption, newMsg.UseCompression, visitorUser)
 }
 
-func (svr *Service) CloseUser(user string) error {
+func (svr *Service) CloseClient(user string) error {
 	ctl, ok := svr.ctlManager.SearchByID(user)
+	if !ok {
+		return fmt.Errorf("user not login")
+	}
+	// 发送关闭客户端指令并由 Client 的 Control 处理
+	CloseInfo := &msg.CloseClient{Token: user}
+	ctl.sendCh <- CloseInfo
+	return nil
+}
+
+func (svr *Service) CloseProxy(runID string) error {
+	ctl, ok := svr.ctlManager.SearchByProxyRunID(runID)
 	if !ok {
 		return fmt.Errorf("user not login")
 	}

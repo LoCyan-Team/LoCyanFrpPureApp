@@ -363,7 +363,7 @@ func (svr *Service) APICloseClient(w http.ResponseWriter, r *http.Request) {
 		log.Info("Http response [/api/client/close/{user}]: code [%d]", resp.Status)
 	}()
 	log.Info("Http request: [/api/client/close/{user}] %#v", user)
-	err := svr.CloseUser(user)
+	err := svr.CloseClient(user)
 	if err != nil {
 		resp.Status = 404
 		resp.Msg = err.Error()
@@ -372,6 +372,32 @@ func (svr *Service) APICloseClient(w http.ResponseWriter, r *http.Request) {
 		resp.Status = 200
 		resp.Msg = "OK"
 		resp.RunID = user
+	}
+	buf, _ = json.Marshal(&resp)
+
+	_, _ = w.Write(buf)
+}
+
+func (svr *Service) APICloseProxy(w http.ResponseWriter, r *http.Request) {
+	var (
+		buf  []byte
+		resp = CloseUserResp{}
+	)
+	params := mux.Vars(r)
+	runID := params["run_id"]
+	defer func() {
+		log.Info("Http response [/api/proxy/close/{run_id}]: code [%d]", resp.Status)
+	}()
+	log.Info("Http request: [/api/proxy/close/{run_id}] %#v", runID)
+	err := svr.CloseProxy(runID)
+	if err != nil {
+		resp.Status = 404
+		resp.Msg = err.Error()
+		resp.RunID = "nan"
+	} else {
+		resp.Status = 200
+		resp.Msg = "OK"
+		resp.RunID = runID
 	}
 	buf, _ = json.Marshal(&resp)
 
