@@ -124,14 +124,14 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		s, err := api.NewService("https://lcf-frps-api.locyanfrp.cn/api/")
+		//s, err := api.NewService("https://lcf-frps-api.locyanfrp.cn/api/")
 		//sApiV2, errApiV2 := api.NewService("https://api-v2.locyanfrp.cn/api/v2")
-		sApiV2, errApiV2 := api.NewService("http://localhost:8080/api/v2")
-		if err != nil {
-			log.Warn("Initialize API Service Failed, err: %s", err)
-		}
+		sApiV2, errApiV2 := api.NewService("http://100.91.38.85:8080/api/v2/frp/client/config")
+		//if err != nil {
+		//	log.Warn("Initialize API Service Failed, err: %s", err)
+		//}
 		if errApiV2 != nil {
-			log.Warn("Initialize API Service Failed, err: %s", err)
+			log.Warn("Initialize API Service Failed, err: %s", errApiV2)
 		}
 
 		if cfgToken != "" && len(cfgProxyIDs) > 0 {
@@ -205,7 +205,7 @@ var rootCmd = &cobra.Command{
 			}
 
 			// 没有多开现象
-			cfg, err := s.EZStartGetCfg(cfgToken, cfgProxyIDs[0])
+			cfg, err := sApiV2.ProxyStartGetCfg(cfgToken, cfgProxyIDs[0])
 			if err != nil {
 				log.Warn("获取配置文件失败，请检查参数: %s", err)
 				// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
