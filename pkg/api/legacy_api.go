@@ -12,12 +12,12 @@ import (
 	"github.com/fatedier/frp/pkg/msg"
 )
 
-// Service locyanfrp api servie
+// Service locyanfrp api service
 type Service struct {
 	Host url.URL
 }
 
-// NewService crate locyanfrp api servie
+// NewService crate locyanfrp api service
 func NewService(host string) (s *Service, err error) {
 	u, err := url.Parse(host)
 	if err != nil {
@@ -26,12 +26,12 @@ func NewService(host string) (s *Service, err error) {
 	return &Service{*u}, nil
 }
 
-// 简单启动获取Cfg
-func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err error) {
+// EZStartGetCfg 简单启动获取Cfg
+func (s Service) EZStartGetCfg(token string, proxyId string) (cfg string, err error) {
 	values := url.Values{}
 	values.Set("action", "getcfg")
 	values.Set("token", token)
-	values.Set("id", proxyid)
+	values.Set("id", proxyId)
 	// Encode 请求参数
 	s.Host.RawQuery = values.Encode()
 	defer func(u *url.URL) {
@@ -75,7 +75,7 @@ func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err er
 	return response.Cfg, nil
 }
 
-// 提交runID至服务器
+// SubmitRunId 提交runID至服务器
 func (s Service) SubmitRunId(stk string, pMsg *msg.NewProxy, runId string) (err error) {
 	values := url.Values{}
 	values.Set("run_id", runId)

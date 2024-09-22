@@ -125,7 +125,12 @@ var rootCmd = &cobra.Command{
 		}
 
 		s, err := api.NewService("https://lcf-frps-api.locyanfrp.cn/api/")
+		//sApiV2, errApiV2 := api.NewService("https://api-v2.locyanfrp.cn/api/v2")
+		sApiV2, errApiV2 := api.NewService("http://localhost:8080/api/v2")
 		if err != nil {
+			log.Warn("Initialize API Service Failed, err: %s", err)
+		}
+		if errApiV2 != nil {
 			log.Warn("Initialize API Service Failed, err: %s", err)
 		}
 
@@ -158,10 +163,10 @@ var rootCmd = &cobra.Command{
 					wg.Go(func() {
 						configPath := filepath.Join("ini", fmt.Sprintf("%s.ini", proxyID))
 
-						configContent, err := s.EZStartGetCfg(cfgToken, proxyID)
+						configContent, err := sApiV2.ProxyStartGetCfg(cfgToken, proxyID)
 						if err != nil {
 							// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
-							log.Error("Get config file failed, please check your arguments: %s", err)
+							log.Error("获取配置文件失败，请检查参数: %s", err)
 
 							os.Exit(1)
 						}
@@ -170,7 +175,7 @@ var rootCmd = &cobra.Command{
 
 						configFile, err := os.OpenFile(configPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 						if err != nil {
-							log.Error("Open config file failed: %s", err)
+							log.Error("访问配置文件出错: %s", err)
 
 							os.Exit(1)
 						}
@@ -180,14 +185,14 @@ var rootCmd = &cobra.Command{
 						_, err = configFile.WriteString(configContent) // 直接写入字符串数据
 						// 写入文件是否成功检测
 						if err != nil {
-							log.Error("Write config failed: %s", err)
+							log.Error("写入配置文件出错: %s", err)
 
 							os.Exit(1)
 						}
 
 						// 内容写入后直接启动
 						if err := runClient(configPath); err != nil {
-							log.Error("Run client failed: %s", err)
+							log.Error("启动 Client 出错: %s", err)
 
 							os.Exit(1)
 						}
@@ -202,7 +207,7 @@ var rootCmd = &cobra.Command{
 			// 没有多开现象
 			cfg, err := s.EZStartGetCfg(cfgToken, cfgProxyIDs[0])
 			if err != nil {
-				log.Warn("Get config file failed, please check your arguments: %s", err)
+				log.Warn("获取配置文件失败，请检查参数: %s", err)
 				// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
 				os.Exit(1)
 			}
@@ -214,7 +219,7 @@ var rootCmd = &cobra.Command{
 			// 有则打开，无则新建
 			file, err := os.OpenFile("./frpc.ini", os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 			if err != nil {
-				log.Warn("Open frpc.ini failed: %s", err)
+				log.Warn("访问配置文件出错: %s", err)
 
 				os.Exit(1)
 			}
@@ -222,19 +227,19 @@ var rootCmd = &cobra.Command{
 			defer func(file *os.File) {
 				err := file.Close()
 				if err != nil {
-					log.Error("Cant close file: %s", err)
+					log.Error("关闭文件时出错: %s", err)
 				}
 			}(file)
 
 			if _, err := file.WriteString(cfg); err != nil {
-				log.Error("Cant write content to config file: %s", err)
+				log.Error("写入配置文件出错: %s", err)
 
 				os.Exit(1)
 			}
 
 			// 内容写入后直接启动
 			if err := runClient(cfgFile); err != nil {
-				log.Error("Run client failed: %s", err)
+				log.Error("启动 Client 出错: %s", err)
 
 				os.Exit(1)
 			}
