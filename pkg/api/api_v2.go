@@ -48,20 +48,20 @@ func (s Service) ProxyStartGetCfg(token string, proxyId string) (cfg string, err
 	if err != nil {
 		return "", err
 	}
-	response := ResGetCfg{}
+	response := ResProxyCfg{}
 	if err = json.Unmarshal(body, &response); err != nil {
 		return "", err
 	}
-	if !response.Success {
+	if response.Status != 200 {
 		return "", ErrCheckTokenFail{response.Message}
 	}
-	return response.Cfg, nil
+	return response.Data.Config, nil
 }
 
 type ResProxyCfg struct {
 	Status  int    `json:"status"`
 	Message string `json:"message"`
 	Data    struct {
-		Cfg string `json:"config"`
+		Config string `json:"config"`
 	}
 }
