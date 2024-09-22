@@ -12,12 +12,12 @@ import (
 	"github.com/fatedier/frp/pkg/msg"
 )
 
-// Service locyanfrp api service
+// Service LoCyanFrp Frp Server API service
 type Service struct {
 	Host url.URL
 }
 
-// NewService crate locyanfrp api service
+// NewService LoCyanFrp Frp Server API service
 func NewService(host string) (s *Service, err error) {
 	u, err := url.Parse(host)
 	if err != nil {
@@ -27,6 +27,8 @@ func NewService(host string) (s *Service, err error) {
 }
 
 // EZStartGetCfg 简单启动获取Cfg
+// 已废弃，请改用 ProxyStartGetCfg
+// Deprecated
 func (s Service) EZStartGetCfg(token string, proxyId string) (cfg string, err error) {
 	values := url.Values{}
 	values.Set("action", "getcfg")
