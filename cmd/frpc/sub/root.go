@@ -125,8 +125,8 @@ var rootCmd = &cobra.Command{
 		}
 
 		//s, err := api.NewService("https://lcf-frps-api.locyanfrp.cn/api/")
-		//sApiV2, errApiV2 := api.NewService("https://api-v2.locyanfrp.cn/api/v2")
-		sApiV2, errApiV2 := api.NewService("http://100.91.38.85:8080/api/v2/frp/client/config")
+		sApiV2, errApiV2 := api.NewService("https://api-v2.locyanfrp.cn/api/v2/frp/client/config")
+		//sApiV2, errApiV2 := api.NewService("http://100.91.38.85:8080/api/v2/frp/client/config")
 		//if err != nil {
 		//	log.Warn("Initialize API Service Failed, err: %s", err)
 		//}

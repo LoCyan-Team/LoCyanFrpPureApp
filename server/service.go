@@ -563,8 +563,12 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 		nowTime := time.Now().Unix()
 
 		s, err := api.NewService(svr.cfg.APIBaseURL)
+		sApiV2, errApiV2 := api.NewService("https://api-v2.locyanfrp.cn/api/v2/frp/client/config")
 		if err != nil {
 			return err
+		}
+		if errApiV2 != nil {
+			return errApiV2
 		}
 
 		r := regexp.MustCompile(`^[A-Za-z0-9]{1,64}$`)
@@ -575,7 +579,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 		}
 
 		// Connect to API server and verify the user.
-		valid, err := s.CheckToken(loginMsg.User, loginMsg.PrivilegeKey, nowTime, svr.cfg.APIToken)
+		valid, err := sApiV2.CheckFrpToken(loginMsg.PrivilegeKey, svr.cfg.APIToken)
 		if err != nil {
 			return err
 		}

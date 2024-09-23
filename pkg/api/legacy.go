@@ -316,44 +316,6 @@ func BoolToString(val bool) (str string) {
 	return "false"
 }
 
-type ErrHTTPStatus struct {
-	Status int    `json:"status"`
-	Text   string `json:"message"`
-}
-
-func (e ErrHTTPStatus) Error() string {
-	return fmt.Sprintf("LoCyanFrp API Error (Status: %d, Text: %s)", e.Status, e.Text)
-}
-
-type ResponseGetLimit struct {
-	MaxIn  uint64 `json:"max-in"`
-	MaxOut uint64 `json:"max-out"`
-}
-
-type ResponseCheckToken struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
-
-type ResponseCheckProxy struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
-
-type ResGetCfg struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Cfg     string `json:"cfg"`
-}
-
-type ErrCheckTokenFail struct {
-	Message string
-}
-
-type ErrCheckProxyFail struct {
-	Message string
-}
-
 func (e ErrCheckTokenFail) Error() string {
 	return e.Message
 }
