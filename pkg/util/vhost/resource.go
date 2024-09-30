@@ -33,7 +33,7 @@ const (
 <head>
 	<meta charset="UTF-8">
     <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
-    <title>无法找到你所请求的网站！</title>
+    <title>无法找到您所请求的网站 | LoCyanFrp</title>
 	<link rel="icon" href="https://www.locyanfrp.cn/favicon.ico" />
 </head>
 <body>
