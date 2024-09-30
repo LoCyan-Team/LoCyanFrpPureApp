@@ -27,32 +27,66 @@ import (
 var NotFoundPagePath = ""
 
 const (
-	NotFound = `<!DOCTYPE html>
-	<html>
-	<head>
-		<meta charset="UTF-8">
-		<title>无法找到你所请求的网站！</title>
-		<meta name="description" content="无法找到你所请求的网站!,请确定FRP服务已正常启动!">
-		<link rel="icon" type="image/ico" href="https://tx.hk47.cc/favicon.ico">
-		<link rel="stylesheet" href="https://tx.hk47.cc/404-bootstrap.css">
-		<link rel="stylesheet" href="https://tx.hk47.cc/404-style.css">
-	</head>
-	<body>
-		<div id="main" class="container">
-			<div class="row my-card justify-content-center">
-				<div class="col-lg-4 photo-bg"></div>
-				<div class="col-lg-8 card">
-					<h1><b>对不起, 无法找到你的请求的网站！</b></h1><br>
-					<p>找不到您请求的网站，请确定FRP服务已经正常启动! 这个页面来自于 <a href="https://www.locyanfrp.cn/">LoCyanFrp</a></p>
-					<p>We can't find the website you requested, please check that your FRP service available</p>
-					<p>This page comes from <a href="https://www.locyanfrp.cn/">LoCyanFrp</a></p>
-					<hr><script src="https://tenapi.cn/yiyan/?format=js"></script><hr><br>
-				</div>
-			</div>
-		</div>
-	<script src="https://tx.hk47.cc/sakura.js"></script>
-	</body>
-	</html>
+	NotFound = `
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>无法找到你所请求的网站！</title>
+	<link rel="icon" href="https://www.locyanfrp.cn/favicon.ico" />
+</head>
+<body>
+	<div class="container">
+	    <h1>无法找到您所请求的网站</h1>
+        <p>我们无法找到您所请求的网站，请确认 Frp 客户端已正常启动。</p>
+        <p>We can not find your website, please confirm that Frp client started.</p>
+        <p class="powered-by">Powered by <a target="_blank" href="https://www.locyanfrp.cn">LoCyanFrp</a></p>
+	</div>
+</body>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        font-family: 'Microsoft YaHei', Arial, sans-serif;
+    }
+    .container {
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        flex-direction: column;
+        align-items: center;
+    }
+    .container h1 {
+        font-weight: 400;
+        margin-bottom: 1rem;
+    }
+    .container p {
+        color: gray;
+    }
+    .container .powered-by {
+        margin-top: 2rem;
+    }
+    .container .powered-by a {
+        color: rgb(21, 129, 218);
+        text-decoration: none;
+        transition: 0.3s;
+    }
+    .container .powered-by a:hover {
+        color: rgb(24, 144, 243);
+    }
+</style>
+<style>
+    @media (prefers-color-scheme: dark) {
+        html {
+            background-color: rgb(41, 41, 41);
+        }
+        .container h1 {
+            color: white;
+        }
+    }
+</style>
+</html>
 `
 )
 
