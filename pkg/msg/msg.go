@@ -65,7 +65,7 @@ var msgTypeMap = map[byte]interface{}{
 
 var TypeNameNatHoleResp = reflect.TypeOf(&NatHoleResp{}).Elem().Name()
 
-// When frpc start, client send this message to login to server.
+// Login When frpc start, client send this message to login to server.
 type Login struct {
 	Version      string            `json:"version,omitempty"`
 	Hostname     string            `json:"hostname,omitempty"`
@@ -87,7 +87,7 @@ type LoginResp struct {
 	Error   string `json:"error,omitempty"`
 }
 
-// When frpc login success, send this message to frps for running a new proxy.
+// NewProxy When frpc login success, send this message to frps for running a new proxy.
 type NewProxy struct {
 	ProxyName          string            `json:"proxy_name,omitempty"`
 	ProxyType          string            `json:"proxy_type,omitempty"`
@@ -103,8 +103,8 @@ type NewProxy struct {
 	RemotePort int `json:"remote_port,omitempty"`
 
 	// http and https only
-	CustomDomains     []string          `json:"custom_domains,omitempty"`
-	SubDomain         string            `json:"subdomain,omitempty"`
+	CustomDomains []string `json:"custom_domains,omitempty"`
+	//SubDomain         string            `json:"subdomain,omitempty"`
 	Locations         []string          `json:"locations,omitempty"`
 	HTTPUser          string            `json:"http_user,omitempty"`
 	HTTPPwd           string            `json:"http_pwd,omitempty"`

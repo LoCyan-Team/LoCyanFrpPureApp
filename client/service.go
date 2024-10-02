@@ -298,7 +298,7 @@ func (svr *Service) login() (conn net.Conn, cm *ConnectionManager, err error) {
 	xl.ResetPrefixes()
 	xl.AppendPrefix(svr.runID)
 
-	xl.Info("成功登录至服务器, 获取到RunID [%v]", loginRespMsg.RunID)
+	xl.Info("成功登录至服务器, 获取到 Run ID [%v]", loginRespMsg.RunID)
 	return
 }
 
@@ -373,7 +373,7 @@ func (cm *ConnectionManager) OpenConnection() error {
 			tlsConfig, err = transport.NewClientTLSConfig("", "", "", sn)
 		}
 		if err != nil {
-			xl.Warn("无法建立TLS链接: %v", err)
+			xl.Warn("无法建立 TLS 链接: %v", err)
 			return err
 		}
 		tlsConfig.NextProtos = []string{"frp"}
@@ -452,7 +452,7 @@ func (cm *ConnectionManager) realConnect() (net.Conn, error) {
 			cm.cfg.TLSTrustedCaFile,
 			sn)
 		if err != nil {
-			xl.Warn("无法建立TLS链接: %v", err)
+			xl.Warn("无法建立 TLS 链接: %v", err)
 			return nil, err
 		}
 	}

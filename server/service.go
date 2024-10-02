@@ -413,7 +413,7 @@ func (svr *Service) handleConnection(ctx context.Context, conn net.Conn) {
 		}
 
 		// If login failed, send error message there.
-		// Otherwise send success message in control's work goroutine.
+		// Otherwise, send success message in control's work goroutine.
 		if err != nil {
 			xl.Warn("register control error: %v", err)
 			_ = msg.WriteMsg(conn, &msg.LoginResp{
@@ -560,9 +560,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 
 	if svr.cfg.EnableAPI {
 
-		nowTime := time.Now().Unix()
-
-		s, err := api.NewService(svr.cfg.APIBaseURL)
+		s, err := api.NewApiService()
 		if err != nil {
 			return err
 		}
@@ -575,7 +573,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 		}
 
 		// Connect to API server and verify the user.
-		valid, err := s.CheckToken(loginMsg.User, loginMsg.PrivilegeKey, nowTime, svr.cfg.APIToken)
+		valid, err := s.CheckFrpToken(loginMsg.User, svr.cfg.APIToken)
 		if err != nil {
 			return err
 		}
@@ -584,7 +582,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 			return fmt.Errorf("authorization failed")
 		}
 
-		inLimit, outLimit, err = s.GetProxyLimit(loginMsg.User, nowTime, svr.cfg.APIToken)
+		inLimit, outLimit, err = s.GetLimit(loginMsg.User, svr.cfg.APIToken)
 		if err != nil {
 			return err
 		}

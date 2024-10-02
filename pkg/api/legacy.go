@@ -12,12 +12,12 @@ import (
 	"github.com/fatedier/frp/pkg/msg"
 )
 
-// Service locyanfrp api servie
+// Service LoCyanFrp Frp Server API service
 type Service struct {
 	Host url.URL
 }
 
-// NewService crate locyanfrp api servie
+// NewService LoCyanFrp Frp Server API service
 func NewService(host string) (s *Service, err error) {
 	u, err := url.Parse(host)
 	if err != nil {
@@ -26,12 +26,14 @@ func NewService(host string) (s *Service, err error) {
 	return &Service{*u}, nil
 }
 
-// 简单启动获取Cfg
-func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err error) {
+// EZStartGetCfg 简单启动获取Cfg
+// 已废弃，请改用 ProxyStartGetCfg
+// Deprecated
+func (s Service) EZStartGetCfg(token string, proxyId string) (cfg string, err error) {
 	values := url.Values{}
 	values.Set("action", "getcfg")
 	values.Set("token", token)
-	values.Set("id", proxyid)
+	values.Set("id", proxyId)
 	// Encode 请求参数
 	s.Host.RawQuery = values.Encode()
 	defer func(u *url.URL) {
@@ -75,7 +77,7 @@ func (s Service) EZStartGetCfg(token string, proxyid string) (cfg string, err er
 	return response.Cfg, nil
 }
 
-// 提交runID至服务器
+// SubmitRunId 提交runID至服务器
 func (s Service) SubmitRunId(stk string, pMsg *msg.NewProxy, runId string) (err error) {
 	values := url.Values{}
 	values.Set("run_id", runId)
@@ -188,7 +190,7 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 
 	// Http Proxies
 	values.Set("domain", string(domains))
-	values.Set("subdomain", pMsg.SubDomain)
+	//values.Set("subdomain", pMsg.SubDomain)
 
 	// Headers
 	values.Set("locations", string(locations))
@@ -305,51 +307,6 @@ func (s Service) GetProxyLimit(user string, timestamp int64, stk string) (inLimi
 
 	// 这里直接返回 uint64 应该问题不大
 	return response.MaxIn, response.MaxOut, nil
-}
-
-func BoolToString(val bool) (str string) {
-	if val {
-		return "true"
-	}
-	return "false"
-}
-
-type ErrHTTPStatus struct {
-	Status int    `json:"status"`
-	Text   string `json:"message"`
-}
-
-func (e ErrHTTPStatus) Error() string {
-	return fmt.Sprintf("LoCyanFrp API Error (Status: %d, Text: %s)", e.Status, e.Text)
-}
-
-type ResponseGetLimit struct {
-	MaxIn  uint64 `json:"max-in"`
-	MaxOut uint64 `json:"max-out"`
-}
-
-type ResponseCheckToken struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
-
-type ResponseCheckProxy struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-}
-
-type ResGetCfg struct {
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Cfg     string `json:"cfg"`
-}
-
-type ErrCheckTokenFail struct {
-	Message string
-}
-
-type ErrCheckProxyFail struct {
-	Message string
 }
 
 func (e ErrCheckTokenFail) Error() string {

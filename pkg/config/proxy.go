@@ -548,7 +548,7 @@ func (cfg *TCPMuxProxyConf) UnmarshalFromMsg(m *msg.NewProxy) {
 
 	// Add custom logic unmarshal if exists
 	cfg.CustomDomains = m.CustomDomains
-	cfg.SubDomain = m.SubDomain
+	//cfg.SubDomain = m.SubDomain
 	cfg.Multiplexer = m.Multiplexer
 	cfg.HTTPUser = m.HTTPUser
 	cfg.HTTPPwd = m.HTTPPwd
@@ -560,7 +560,7 @@ func (cfg *TCPMuxProxyConf) MarshalToMsg(m *msg.NewProxy) {
 
 	// Add custom logic marshal if exists
 	m.CustomDomains = cfg.CustomDomains
-	m.SubDomain = cfg.SubDomain
+	//m.SubDomain = cfg.SubDomain
 	m.Multiplexer = cfg.Multiplexer
 	m.HTTPUser = cfg.HTTPUser
 	m.HTTPPwd = cfg.HTTPPwd
@@ -662,7 +662,7 @@ func (cfg *HTTPProxyConf) UnmarshalFromMsg(m *msg.NewProxy) {
 
 	// Add custom logic unmarshal if exists
 	cfg.CustomDomains = m.CustomDomains
-	cfg.SubDomain = m.SubDomain
+	//cfg.SubDomain = m.SubDomain
 	cfg.Locations = m.Locations
 	cfg.HostHeaderRewrite = m.HostHeaderRewrite
 	cfg.HTTPUser = m.HTTPUser
@@ -676,7 +676,7 @@ func (cfg *HTTPProxyConf) MarshalToMsg(m *msg.NewProxy) {
 
 	// Add custom logic marshal if exists
 	m.CustomDomains = cfg.CustomDomains
-	m.SubDomain = cfg.SubDomain
+	//m.SubDomain = cfg.SubDomain
 	m.Locations = cfg.Locations
 	m.HostHeaderRewrite = cfg.HostHeaderRewrite
 	m.HTTPUser = cfg.HTTPUser
@@ -731,7 +731,7 @@ func (cfg *HTTPSProxyConf) UnmarshalFromMsg(m *msg.NewProxy) {
 
 	// Add custom logic unmarshal if exists
 	cfg.CustomDomains = m.CustomDomains
-	cfg.SubDomain = m.SubDomain
+	//cfg.SubDomain = m.SubDomain
 }
 
 func (cfg *HTTPSProxyConf) MarshalToMsg(m *msg.NewProxy) {
@@ -739,7 +739,7 @@ func (cfg *HTTPSProxyConf) MarshalToMsg(m *msg.NewProxy) {
 
 	// Add custom logic marshal if exists
 	m.CustomDomains = cfg.CustomDomains
-	m.SubDomain = cfg.SubDomain
+	//m.SubDomain = cfg.SubDomain
 }
 
 func (cfg *HTTPSProxyConf) ValidateForClient() (err error) {
