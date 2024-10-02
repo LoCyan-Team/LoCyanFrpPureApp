@@ -17,7 +17,9 @@ package server
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"crypto/tls"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -532,7 +534,13 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 		if err != nil {
 			return err
 		}
-		loginMsg.RunID = loginMsg.User + "-" + randid
+
+		hash := sha256.New()
+		hash.Write([]byte(loginMsg.User))
+		hashInBytes := hash.Sum(nil)
+		userMark := hex.EncodeToString(hashInBytes)[:15]
+
+		loginMsg.RunID = strconv.Itoa(svr.cfg.NodeId) + "-" + userMark + "." + randid
 	}
 
 	ctx := utilnet.NewContextFromConn(ctlConn)

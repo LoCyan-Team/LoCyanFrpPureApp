@@ -199,8 +199,8 @@ type ServerCommonConf struct {
 	// NatHoleAnalysisDataReserveHours specifies the hours to reserve nat hole analysis data.
 	NatHoleAnalysisDataReserveHours int64  `ini:"nat_hole_analysis_data_reserve_hours" json:"nat_hole_analysis_data_reserve_hours"`
 	EnableAPI                       bool   `json:"api_enable"`
-	APIBaseURL                      string `json:"api_baseurl"`
 	APIToken                        string `json:"api_token"`
+	NodeId                          int    `json:"node_id"`
 }
 
 // GetDefaultServerConf returns a server configuration with reasonable
@@ -232,8 +232,8 @@ func GetDefaultServerConf() ServerCommonConf {
 		UDPPacketSize:                   1500,
 		NatHoleAnalysisDataReserveHours: 7 * 24,
 		EnableAPI:                       false,
-		APIBaseURL:                      "",
 		APIToken:                        "",
+		NodeId:                          0,
 	}
 }
 
@@ -274,23 +274,23 @@ func UnmarshalServerConfFromIni(source interface{}) (ServerCommonConf, error) {
 	}
 
 	var tmpStr string
+	var tmpBool bool
+	var tmpInt int
 
-	tmpStr = s.Key("api_enable").String()
-	if tmpStr == "false" {
-		common.EnableAPI = false
-	} else {
-		common.EnableAPI = true
+	tmpBool, err = s.Key("api_enable").Bool()
+	common.EnableAPI = tmpBool
+	if err != nil {
+		return ServerCommonConf{}, err
 	}
 
-	tmpStr = s.Key("api_baseurl").String()
-	if tmpStr == s.Key("api_baseurl").String() {
-		common.APIBaseURL = tmpStr
+	tmpInt, err = s.Key("node_id").Int()
+	common.NodeId = tmpInt
+	if err != nil {
+		return ServerCommonConf{}, err
 	}
 
 	tmpStr = s.Key("api_token").String()
-	if tmpStr == s.Key("api_token").String() {
-		common.APIToken = tmpStr
-	}
+	common.APIToken = tmpStr
 
 	// plugin.xxx
 	pluginOpts := make(map[string]plugin.HTTPPluginOptions)
