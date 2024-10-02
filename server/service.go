@@ -581,7 +581,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 		}
 
 		// Connect to API server and verify the user.
-		valid, err := s.FrpTokenCheck(loginMsg.User, svr.cfg.APIToken)
+		valid, err := s.FrpTokenCheck(loginMsg.User, svr.cfg.APIToken, svr.cfg.NodeId)
 		if err != nil {
 			return err
 		}
@@ -590,7 +590,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 			return fmt.Errorf("authorization failed")
 		}
 
-		inLimit, outLimit, err = s.GetLimit(loginMsg.User, svr.cfg.APIToken)
+		inLimit, outLimit, err = s.GetLimit(loginMsg.User, svr.cfg.APIToken, svr.cfg.NodeId)
 		if err != nil {
 			return err
 		}

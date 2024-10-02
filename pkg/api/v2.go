@@ -72,7 +72,7 @@ func (s V2Service) ProxyStartGetCfg(frpToken string, proxyId string) (cfg string
 }
 
 // SubmitRunId 提交runID至服务器
-func (s V2Service) SubmitRunId(apiToken string, pMsg *msg.NewProxy, runId string) (err error) {
+func (s V2Service) SubmitRunId(apiToken string, nodeId int, pMsg *msg.NewProxy, runId string) (err error) {
 	api, _ := url.Parse(apiV2Url + "/server/run-id")
 	values := url.Values{}
 
@@ -80,7 +80,7 @@ func (s V2Service) SubmitRunId(apiToken string, pMsg *msg.NewProxy, runId string
 
 	values.Set("run_id", runId)
 	values.Set("proxy_name", name)
-	values.Set("api_token", apiToken)
+	values.Set("api_token", apiToken+"|"+strconv.Itoa(nodeId))
 	api.RawQuery = values.Encode()
 	defer func(u *url.URL) {
 		u.RawQuery = ""
@@ -103,11 +103,11 @@ func (s V2Service) SubmitRunId(apiToken string, pMsg *msg.NewProxy, runId string
 }
 
 // FrpTokenCheck 校验客户端 Frp Token
-func (s V2Service) FrpTokenCheck(frpToken string, apiToken string) (ok bool, err error) {
+func (s V2Service) FrpTokenCheck(frpToken string, apiToken string, nodeId int) (ok bool, err error) {
 	api, _ := url.Parse(apiV2Url + "/server/token")
 	values := url.Values{}
 	values.Set("frp_token", frpToken)
-	values.Set("api_token", apiToken)
+	values.Set("api_token", apiToken+"|"+strconv.Itoa(nodeId))
 	api.RawQuery = values.Encode()
 	defer func(u *url.URL) {
 		u.RawQuery = ""
@@ -151,7 +151,7 @@ func (s V2Service) FrpTokenCheck(frpToken string, apiToken string) (ok bool, err
 }
 
 // ProxyCheck 校验客户端代理
-func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken string) (ok bool, err error) {
+func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken string, nodeId int) (ok bool, err error) {
 	api, _ := url.Parse(apiV2Url + "/server/proxy")
 	domains, err := json.Marshal(pMsg.CustomDomains)
 	if err != nil {
@@ -174,7 +174,7 @@ func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken stri
 
 	// API Basic
 	values.Set("frp_token", frpToken)
-	values.Set("api_token", apiToken)
+	values.Set("api_token", apiToken+"|"+strconv.Itoa(nodeId))
 
 	// Proxies basic info
 	values.Set("proxy_name", name)
@@ -248,12 +248,12 @@ func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken stri
 }
 
 // GetLimit 获取隧道限速信息
-func (s V2Service) GetLimit(frpToken string, apiToken string) (inLimit, outLimit uint64, err error) {
+func (s V2Service) GetLimit(frpToken string, apiToken string, nodeId int) (inLimit, outLimit uint64, err error) {
 	api, _ := url.Parse(apiV2Url + "/server/limit")
 	// 这部分就照之前的搬过去了，能跑就行x
 	values := url.Values{}
 	values.Set("frp_token", frpToken)
-	values.Set("api_token", apiToken)
+	values.Set("api_token", apiToken+"|"+strconv.Itoa(nodeId))
 	api.RawQuery = values.Encode()
 	defer func(u *url.URL) {
 		u.RawQuery = ""

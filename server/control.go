@@ -598,7 +598,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 	if ctl.serverCfg.EnableAPI {
 
 		// 检查隧道合法性
-		ok, err := s.ProxyCheck(ctl.loginMsg.User, pxyMsg, ctl.serverCfg.APIToken)
+		ok, err := s.ProxyCheck(ctl.loginMsg.User, pxyMsg, ctl.serverCfg.APIToken, ctl.serverCfg.NodeId)
 		if err != nil {
 			return remoteAddr, err
 		}
@@ -608,7 +608,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		}
 
 		// 检查通过后提交隧道RunID至服务器
-		err3 := s.SubmitRunId(ctl.serverCfg.APIToken, pxyMsg, ctl.runID)
+		err3 := s.SubmitRunId(ctl.serverCfg.APIToken, ctl.serverCfg.NodeId, pxyMsg, ctl.runID)
 		if err3 != nil {
 			return remoteAddr, err3
 		}
