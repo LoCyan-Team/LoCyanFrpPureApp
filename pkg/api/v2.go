@@ -1,7 +1,6 @@
 package api
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"github.com/fatedier/frp/pkg/msg"
 	"io"
@@ -49,16 +48,21 @@ func (s V2Service) ProxyStartGetCfg(frpToken string, proxyId string) (cfg string
 	if err != nil {
 		return "", err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return "", ErrHTTPStatus{
-			Status: resp.StatusCode,
-			Text:   resp.Status,
-		}
-	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
+
+	// 非正常状态码
+	if resp.StatusCode != http.StatusOK {
+		errInfo := ResError{}
+		if err = json.Unmarshal(body, &errInfo); err != nil {
+			return "", err
+		}
+		return "", errInfo
+	}
+
 	response := ResGetProxyCfg{}
 	if err = json.Unmarshal(body, &response); err != nil {
 		return "", err
@@ -123,16 +127,21 @@ func (s V2Service) CheckFrpToken(frpToken string, apiToken string) (ok bool, err
 	if err != nil {
 		return false, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return false, ErrHTTPStatus{
-			Status: resp.StatusCode,
-			Text:   resp.Status,
-		}
-	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, err
 	}
+
+	// 非正常状态码
+	if resp.StatusCode != http.StatusOK {
+		errInfo := ResError{}
+		if err = json.Unmarshal(body, &errInfo); err != nil {
+			return false, err
+		}
+		return false, errInfo
+	}
+
 	response := ResCheckFrpToken{}
 	if err = json.Unmarshal(body, &response); err != nil {
 		return false, err
@@ -215,16 +224,21 @@ func (s V2Service) CheckProxy(frpToken string, pMsg *msg.NewProxy, apiToken stri
 	if err != nil {
 		return false, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return false, ErrHTTPStatus{
-			Status: resp.StatusCode,
-			Text:   resp.Status,
-		}
-	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return false, err
 	}
+
+	// 非正常状态码
+	if resp.StatusCode != http.StatusOK {
+		errInfo := ResError{}
+		if err = json.Unmarshal(body, &errInfo); err != nil {
+			return false, err
+		}
+		return false, errInfo
+	}
+
 	response := ResponseCheckProxy{}
 	if err = json.Unmarshal(body, &response); err != nil {
 		return false, err
@@ -248,33 +262,28 @@ func (s V2Service) GetLimit(frpToken string, apiToken string) (inLimit, outLimit
 	}(api)
 
 	tr := &http.Transport{
-		// 跳过证书验证
-		TLSClientConfig:   &tls.Config{InsecureSkipVerify: true},
 		DisableKeepAlives: true,
 	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(api.String())
-
 	defer resp.Body.Close()
-
 	if err != nil {
 		return 1280, 1280, err
 	}
-	if resp.StatusCode != http.StatusOK {
-		return 1280, 1280, err
-	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return 1280, 1280, err
 	}
 
-	er := &ErrHTTPStatus{}
-	if err = json.Unmarshal(body, er); err != nil {
-		return 1280, 1280, err
-	}
-	if er.Status != 200 {
-		return 1280, 1280, er
+	// 非正常状态码
+	if resp.StatusCode != http.StatusOK {
+		errInfo := ResError{}
+		if err = json.Unmarshal(body, &errInfo); err != nil {
+			return 1280, 1280, err
+		}
+		return 1280, 1280, errInfo
 	}
 
 	response := &ResGetLimit{}

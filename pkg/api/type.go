@@ -30,6 +30,15 @@ type ResGetLimit struct {
 	}
 }
 
+type ResError struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
+}
+
+func (r ResError) Error() string {
+	return fmt.Sprintf("LoCyanFrp API Error (Status: %d, Message: %s)", r.Status, r.Message)
+}
+
 // Legacy
 
 type ErrHTTPStatus struct {
