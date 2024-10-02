@@ -39,7 +39,7 @@ func (s V2Service) ProxyStartGetCfg(frpToken string, proxyId string) (cfg string
 	}
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get(api.Host)
+	resp, err := client.Get(api.String())
 	// 请求出现错误，resp返回nil判断
 	if resp == nil {
 		return "", err
@@ -86,7 +86,7 @@ func (s V2Service) SubmitRunId(apiToken string, pMsg *msg.NewProxy, runId string
 	}
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Post(api.Host, "application/json", strings.NewReader(values.Encode()))
+	resp, err := client.Post(api.String(), "application/json", strings.NewReader(values.Encode()))
 	// 请求出现错误，resp返回nil判断
 	if resp == nil {
 		return err
@@ -113,7 +113,7 @@ func (s V2Service) CheckFrpToken(frpToken string, apiToken string) (ok bool, err
 	}
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get(api.Host)
+	resp, err := client.Get(api.String())
 	// 请求出现错误，resp返回nil判断
 	if resp == nil {
 		return false, err
@@ -204,7 +204,7 @@ func (s V2Service) CheckProxy(frpToken string, pMsg *msg.NewProxy, apiToken stri
 	}
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get(api.Host)
+	resp, err := client.Get(api.String())
 
 	// 请求出现错误，resp返回nil判断
 	if resp == nil {
@@ -254,7 +254,7 @@ func (s V2Service) GetLimit(frpToken string, apiToken string) (inLimit, outLimit
 	}
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get(api.Host)
+	resp, err := client.Get(api.String())
 
 	defer resp.Body.Close()
 
