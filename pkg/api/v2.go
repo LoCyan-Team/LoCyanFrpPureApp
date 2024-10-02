@@ -78,9 +78,11 @@ func (s V2Service) ProxyStartGetCfg(frpToken string, proxyId string) (cfg string
 func (s V2Service) SubmitRunId(apiToken string, pMsg *msg.NewProxy, runId string) (err error) {
 	api, _ := url.Parse(apiV2Url + "/server/run-id")
 	values := url.Values{}
+
+	name := strings.Split(pMsg.ProxyName, ".")[1]
+
 	values.Set("run_id", runId)
-	values.Set("proxy_name", pMsg.ProxyName)
-	log.Info(pMsg.ProxyName)
+	values.Set("proxy_name", name)
 	values.Set("api_token", apiToken)
 	api.RawQuery = values.Encode()
 	defer func(u *url.URL) {
@@ -174,12 +176,14 @@ func (s V2Service) CheckProxy(frpToken string, pMsg *msg.NewProxy, apiToken stri
 
 	values := url.Values{}
 
+	name := strings.Split(pMsg.ProxyName, ".")[1]
+
 	// API Basic
 	values.Set("frp_token", frpToken)
 	values.Set("api_token", apiToken)
 
 	// Proxies basic info
-	values.Set("proxy_name", pMsg.ProxyName)
+	values.Set("proxy_name", name)
 	log.Info(pMsg.ProxyName)
 	values.Set("proxy_type", pMsg.ProxyType)
 	values.Set("use_encryption", BoolToString(pMsg.UseEncryption))
