@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"github.com/fatedier/frp/pkg/msg"
+	"github.com/fatedier/frp/pkg/util/log"
 	"io"
 	"net/http"
 	"net/url"
@@ -79,6 +80,7 @@ func (s V2Service) SubmitRunId(apiToken string, pMsg *msg.NewProxy, runId string
 	values := url.Values{}
 	values.Set("run_id", runId)
 	values.Set("proxy_name", pMsg.ProxyName)
+	log.Info(pMsg.ProxyName)
 	values.Set("api_token", apiToken)
 	api.RawQuery = values.Encode()
 	defer func(u *url.URL) {
@@ -178,6 +180,7 @@ func (s V2Service) CheckProxy(frpToken string, pMsg *msg.NewProxy, apiToken stri
 
 	// Proxies basic info
 	values.Set("proxy_name", pMsg.ProxyName)
+	log.Info(pMsg.ProxyName)
 	values.Set("proxy_type", pMsg.ProxyType)
 	values.Set("use_encryption", BoolToString(pMsg.UseEncryption))
 	values.Set("use_compression", BoolToString(pMsg.UseCompression))
