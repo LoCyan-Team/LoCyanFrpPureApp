@@ -68,9 +68,6 @@ func (s V2Service) ProxyStartGetCfg(frpToken string, proxyId string) (cfg string
 	if err = json.Unmarshal(body, &response); err != nil {
 		return "", err
 	}
-	if response.Status != 200 {
-		return "", ErrCheckTokenFail{response.Message}
-	}
 	return response.Data.Config, nil
 }
 
@@ -105,8 +102,8 @@ func (s V2Service) SubmitRunId(apiToken string, pMsg *msg.NewProxy, runId string
 	return err
 }
 
-// CheckFrpToken 校验客户端 Frp Token
-func (s V2Service) CheckFrpToken(frpToken string, apiToken string) (ok bool, err error) {
+// FrpTokenCheck 校验客户端 Frp Token
+func (s V2Service) FrpTokenCheck(frpToken string, apiToken string) (ok bool, err error) {
 	api, _ := url.Parse(apiV2Url + "/server/token")
 	values := url.Values{}
 	values.Set("frp_token", frpToken)
@@ -150,14 +147,11 @@ func (s V2Service) CheckFrpToken(frpToken string, apiToken string) (ok bool, err
 	if err = json.Unmarshal(body, &response); err != nil {
 		return false, err
 	}
-	if response.Status != 200 {
-		return false, ErrCheckTokenFail{response.Message}
-	}
 	return true, nil
 }
 
-// CheckProxy 校验客户端代理
-func (s V2Service) CheckProxy(frpToken string, pMsg *msg.NewProxy, apiToken string) (ok bool, err error) {
+// ProxyCheck 校验客户端代理
+func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken string) (ok bool, err error) {
 	api, _ := url.Parse(apiV2Url + "/server/proxy")
 	domains, err := json.Marshal(pMsg.CustomDomains)
 	if err != nil {
@@ -246,12 +240,9 @@ func (s V2Service) CheckProxy(frpToken string, pMsg *msg.NewProxy, apiToken stri
 		return false, errInfo
 	}
 
-	response := ResponseCheckProxy{}
+	response := ResCheckProxy{}
 	if err = json.Unmarshal(body, &response); err != nil {
 		return false, err
-	}
-	if !response.Success {
-		return false, ErrCheckProxyFail{response.Message}
 	}
 	return true, nil
 }

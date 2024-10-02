@@ -598,7 +598,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 	if ctl.serverCfg.EnableAPI {
 
 		// 检查隧道合法性
-		ok, err := s.CheckProxy(ctl.loginMsg.User, pxyMsg, ctl.serverCfg.APIToken)
+		ok, err := s.ProxyCheck(ctl.loginMsg.User, pxyMsg, ctl.serverCfg.APIToken)
 		if err != nil {
 			return remoteAddr, err
 		}

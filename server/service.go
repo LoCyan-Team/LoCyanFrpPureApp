@@ -573,7 +573,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 		}
 
 		// Connect to API server and verify the user.
-		valid, err := s.CheckFrpToken(loginMsg.User, svr.cfg.APIToken)
+		valid, err := s.FrpTokenCheck(loginMsg.User, svr.cfg.APIToken)
 		if err != nil {
 			return err
 		}

@@ -15,7 +15,7 @@ type ResCheckFrpToken struct {
 	Data    struct{}
 }
 
-type ResVerifyProxy struct {
+type ResCheckProxy struct {
 	Status  int    `json:"status"`
 	Message string `json:"message"`
 	Data    struct{}
