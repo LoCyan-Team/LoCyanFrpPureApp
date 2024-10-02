@@ -588,24 +588,17 @@ func (ctl *Control) HandleNatHoleReport(m *msg.NatHoleReport) {
 
 func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err error) {
 	var pxyConf config.ProxyConf
-	s, err := api.NewService(ctl.serverCfg.APIBaseURL)
-	s2, err2 := api.NewService("https://api-v2.locyanfrp.cn/api/v2/proxies/submitRunId")
-	// s2, err2 := api.NewService("http://127.0.0.1:8080/api/v2/proxies/submitRunId")
+	s, err := api.NewApiService()
 	var workConn proxy.GetWorkConnFn = ctl.GetWorkConn
 
 	if err != nil {
 		return remoteAddr, err
 	}
 
-	if err2 != nil {
-		return remoteAddr, err2
-	}
-
 	if ctl.serverCfg.EnableAPI {
 
-		nowTime := time.Now().Unix()
 		// 检查隧道合法性
-		ok, err := s.CheckProxy(ctl.loginMsg.User, pxyMsg, nowTime, ctl.serverCfg.APIToken)
+		ok, err := s.CheckProxy(ctl.loginMsg.User, pxyMsg, ctl.serverCfg.APIToken)
 		if err != nil {
 			return remoteAddr, err
 		}
@@ -615,7 +608,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		}
 
 		// 检查通过后提交隧道RunID至服务器
-		err3 := s2.SubmitRunId(ctl.serverCfg.APIToken, pxyMsg, ctl.runID)
+		err3 := s.SubmitRunId(ctl.serverCfg.APIToken, pxyMsg, ctl.runID)
 		if err3 != nil {
 			return remoteAddr, err3
 		}

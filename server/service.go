@@ -413,7 +413,7 @@ func (svr *Service) handleConnection(ctx context.Context, conn net.Conn) {
 		}
 
 		// If login failed, send error message there.
-		// Otherwise send success message in control's work goroutine.
+		// Otherwise, send success message in control's work goroutine.
 		if err != nil {
 			xl.Warn("register control error: %v", err)
 			_ = msg.WriteMsg(conn, &msg.LoginResp{
@@ -560,15 +560,9 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 
 	if svr.cfg.EnableAPI {
 
-		nowTime := time.Now().Unix()
-
-		s, err := api.NewService(svr.cfg.APIBaseURL)
-		sApiV2, errApiV2 := api.NewService("https://api-v2.locyanfrp.cn/api/v2/frp/client/config")
+		s, err := api.NewApiService()
 		if err != nil {
 			return err
-		}
-		if errApiV2 != nil {
-			return errApiV2
 		}
 
 		r := regexp.MustCompile(`^[A-Za-z0-9]{1,64}$`)
@@ -579,7 +573,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 		}
 
 		// Connect to API server and verify the user.
-		valid, err := sApiV2.CheckFrpToken(loginMsg.PrivilegeKey, svr.cfg.APIToken)
+		valid, err := s.CheckFrpToken(loginMsg.User, svr.cfg.APIToken)
 		if err != nil {
 			return err
 		}
@@ -588,7 +582,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login) (err 
 			return fmt.Errorf("authorization failed")
 		}
 
-		inLimit, outLimit, err = s.GetProxyLimit(loginMsg.User, nowTime, svr.cfg.APIToken)
+		inLimit, outLimit, err = s.GetLimit(loginMsg.User, svr.cfg.APIToken)
 		if err != nil {
 			return err
 		}

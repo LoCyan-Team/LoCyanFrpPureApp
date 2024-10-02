@@ -125,13 +125,13 @@ var rootCmd = &cobra.Command{
 		}
 
 		//s, err := api.NewService("https://lcf-frps-api.locyanfrp.cn/api/")
-		sApiV2, errApiV2 := api.NewService("https://api-v2.locyanfrp.cn/api/v2/frp/client/config")
+		s, err := api.NewApiService()
 		//sApiV2, errApiV2 := api.NewService("http://100.91.38.85:8080/api/v2/frp/client/config")
 		//if err != nil {
 		//	log.Warn("Initialize API Service Failed, err: %s", err)
 		//}
-		if errApiV2 != nil {
-			log.Warn("Initialize API Service Failed, err: %s", errApiV2)
+		if err != nil {
+			log.Warn("Initialize API Service Failed, err: %s", err)
 		}
 
 		if cfgToken != "" && len(cfgProxyIDs) > 0 {
@@ -163,7 +163,7 @@ var rootCmd = &cobra.Command{
 					wg.Go(func() {
 						configPath := filepath.Join("ini", fmt.Sprintf("%s.ini", proxyID))
 
-						configContent, err := sApiV2.ProxyStartGetCfg(cfgToken, proxyID)
+						configContent, err := s.ProxyStartGetCfg(cfgToken, proxyID)
 						if err != nil {
 							// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
 							log.Error("获取配置文件失败，请检查参数: %s", err)
@@ -205,7 +205,7 @@ var rootCmd = &cobra.Command{
 			}
 
 			// 没有多开现象
-			cfg, err := sApiV2.ProxyStartGetCfg(cfgToken, cfgProxyIDs[0])
+			cfg, err := s.ProxyStartGetCfg(cfgToken, cfgProxyIDs[0])
 			if err != nil {
 				log.Warn("获取配置文件失败，请检查参数: %s", err)
 				// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错

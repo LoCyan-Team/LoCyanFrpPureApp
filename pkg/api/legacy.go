@@ -190,7 +190,7 @@ func (s Service) CheckProxy(user string, pMsg *msg.NewProxy, timestamp int64, st
 
 	// Http Proxies
 	values.Set("domain", string(domains))
-	values.Set("subdomain", pMsg.SubDomain)
+	//values.Set("subdomain", pMsg.SubDomain)
 
 	// Headers
 	values.Set("locations", string(locations))
@@ -307,13 +307,6 @@ func (s Service) GetProxyLimit(user string, timestamp int64, stk string) (inLimi
 
 	// 这里直接返回 uint64 应该问题不大
 	return response.MaxIn, response.MaxOut, nil
-}
-
-func BoolToString(val bool) (str string) {
-	if val {
-		return "true"
-	}
-	return "false"
 }
 
 func (e ErrCheckTokenFail) Error() string {

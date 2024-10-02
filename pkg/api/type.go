@@ -15,6 +15,21 @@ type ResCheckFrpToken struct {
 	Data    struct{}
 }
 
+type ResVerifyProxy struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
+	Data    struct{}
+}
+
+type ResGetLimit struct {
+	Status  int    `json:"status"`
+	Message string `json:"message"`
+	Data    struct {
+		Inbound  uint64 `json:"inbound"`
+		Outbound uint64 `json:"outbound"`
+	}
+}
+
 // Legacy
 
 type ErrHTTPStatus struct {
