@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/util/log"
 	"io"
 	"net/http"
 	"net/url"
@@ -178,7 +177,7 @@ func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken stri
 
 	// Proxies basic info
 	values.Set("proxy_name", name)
-	log.Info(pMsg.ProxyName)
+	//log.Info("Proxy name: " + pMsg.ProxyName)
 	values.Set("proxy_type", pMsg.ProxyType)
 	values.Set("use_encryption", BoolToString(pMsg.UseEncryption))
 	values.Set("use_compression", BoolToString(pMsg.UseCompression))
@@ -196,7 +195,7 @@ func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken stri
 
 	// TCP & UDP & STCP
 	values.Set("remote_port", strconv.Itoa(pMsg.RemotePort))
-	log.Info(strconv.Itoa(pMsg.RemotePort))
+	//log.Info(strconv.Itoa(pMsg.RemotePort))
 
 	// STCP & XTCP
 	values.Set("secret_key", pMsg.Sk)
