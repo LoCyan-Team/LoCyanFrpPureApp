@@ -196,6 +196,7 @@ func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken stri
 
 	// TCP & UDP & STCP
 	values.Set("remote_port", strconv.Itoa(pMsg.RemotePort))
+	log.Info(strconv.Itoa(pMsg.RemotePort))
 
 	// STCP & XTCP
 	values.Set("secret_key", pMsg.Sk)
