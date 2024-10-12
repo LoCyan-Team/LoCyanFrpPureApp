@@ -28,7 +28,7 @@ func FullText() string {
 }
 
 func Full() string {
-	return version
+	return "LoCyanFrp-" + version
 }
 
 func getSubVersion(v string, position int) int64 {
