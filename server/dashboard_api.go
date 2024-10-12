@@ -74,7 +74,7 @@ func (svr *Service) APIServerInfo(w http.ResponseWriter, r *http.Request) {
 	log.Info("Http request: [%s]", r.URL.Path)
 	serverStats := mem.StatsCollector.GetServer()
 	svrResp := serverInfoResp{
-		Version:               version.Full(),
+		Version:               version.FullText(),
 		BindPort:              svr.cfg.BindPort,
 		BindUDPPort:           svr.cfg.BindUDPPort,
 		VhostHTTPPort:         svr.cfg.VhostHTTPPort,

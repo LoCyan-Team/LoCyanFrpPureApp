@@ -111,11 +111,11 @@ var rootCmd = &cobra.Command{
 	Short: "Edited from fatedier/frp, Powered by LoCyanTeam",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if showVersion {
-			fmt.Println(version.Full())
+			fmt.Println(version.FullText())
 			return nil
 		}
 
-		log.Info("欢迎使用 LoCyanFrp, Stable Version: " + version.Full())
+		log.Info("欢迎使用 LoCyanFrp, Stable Version: " + version.FullText())
 
 		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
 		// Note that it's only designed for testing. It's not guaranteed to be stable.

@@ -23,8 +23,12 @@ var version = "0.51.3"
 var buildNumber = "7"
 var buildDate = "2024101201"
 
-func Full() string {
+func FullText() string {
 	return "LoCyanFrp " + version + "-" + buildNumber + " #" + buildDate
+}
+
+func Full() string {
+	return version
 }
 
 func getSubVersion(v string, position int) int64 {
