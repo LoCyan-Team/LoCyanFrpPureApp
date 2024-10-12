@@ -20,11 +20,11 @@ import (
 )
 
 var version = "0.51.3"
-var number = "7"
-var build = "2024101201"
+var buildNumber = "7"
+var buildDate = "2024101201"
 
 func Full() string {
-	return "LoCyanFrp " + version + "-" + number + " #" + build
+	return "LoCyanFrp " + version + "-" + buildNumber + " #" + buildDate
 }
 
 func getSubVersion(v string, position int) int64 {
