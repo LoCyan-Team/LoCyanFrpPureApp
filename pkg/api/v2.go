@@ -15,6 +15,9 @@ type V2Service struct {
 }
 
 var apiV2Url = "https://api-v2.locyanfrp.cn/api/v2/frp"
+var tr = &http.Transport{
+	DisableKeepAlives: true,
+}
 
 // NewApiService LoCyanFrp API service
 func NewApiService() (s *V2Service, err error) {
@@ -33,21 +36,13 @@ func (s V2Service) ProxyStartGetCfg(frpToken string, proxyId string) (cfg string
 		u.RawQuery = ""
 	}(api)
 
-	tr := &http.Transport{
-		DisableKeepAlives: true,
-	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(api.String())
-	// 请求出现错误，resp返回nil判断
-	if resp == nil {
-		return "", err
-	}
-
-	defer resp.Body.Close()
 	if err != nil {
 		return "", err
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -85,20 +80,15 @@ func (s V2Service) SubmitRunId(apiToken string, nodeId int, pMsg *msg.NewProxy, 
 		u.RawQuery = ""
 	}(api)
 
-	tr := &http.Transport{
-		DisableKeepAlives: true,
-	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Post(api.String(), "application/json", strings.NewReader(values.Encode()))
-	// 请求出现错误，resp返回nil判断
-	if resp == nil {
+	if err != nil {
 		return err
 	}
-
-	// 提交就完事了管他那么多干什么
 	defer resp.Body.Close()
-	return err
+
+	return nil
 }
 
 // FrpTokenCheck 校验客户端 Frp Token
@@ -112,21 +102,13 @@ func (s V2Service) FrpTokenCheck(frpToken string, apiToken string, nodeId int) (
 		u.RawQuery = ""
 	}(api)
 
-	tr := &http.Transport{
-		DisableKeepAlives: true,
-	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(api.String())
-	// 请求出现错误，resp返回nil判断
-	if resp == nil {
-		return false, err
-	}
-
-	defer resp.Body.Close()
 	if err != nil {
 		return false, err
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -209,22 +191,13 @@ func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken stri
 		u.RawQuery = ""
 	}(api)
 
-	tr := &http.Transport{
-		DisableKeepAlives: true,
-	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(api.String())
-
-	// 请求出现错误，resp返回nil判断
-	if resp == nil {
-		return false, err
-	}
-
-	defer resp.Body.Close()
 	if err != nil {
 		return false, err
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -259,16 +232,13 @@ func (s V2Service) GetLimit(frpToken string, apiToken string, nodeId int) (inLim
 		u.RawQuery = ""
 	}(api)
 
-	tr := &http.Transport{
-		DisableKeepAlives: true,
-	}
 	client := &http.Client{Transport: tr}
 
 	resp, err := client.Get(api.String())
-	defer resp.Body.Close()
 	if err != nil {
 		return 1280, 1280, err
 	}
+	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
@@ -284,8 +254,8 @@ func (s V2Service) GetLimit(frpToken string, apiToken string, nodeId int) (inLim
 		return 1280, 1280, errInfo
 	}
 
-	response := &ResGetLimit{}
-	if err = json.Unmarshal(body, response); err != nil {
+	response := ResGetLimit{}
+	if err = json.Unmarshal(body, &response); err != nil {
 		return 1280, 1280, err
 	}
 
