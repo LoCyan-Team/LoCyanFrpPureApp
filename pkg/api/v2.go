@@ -14,7 +14,7 @@ import (
 type V2Service struct {
 }
 
-var apiV2Url = "https://api-v2.locyanfrp.cn/api/v2/frp"
+var apiV2Url = "https://api.locyanfrp.cn/v2/frp"
 var tr = &http.Transport{
 	DisableKeepAlives: true,
 }
