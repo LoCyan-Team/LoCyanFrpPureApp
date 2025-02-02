@@ -20,8 +20,8 @@ import (
 )
 
 var version = "0.51.3"
-var buildNumber = "7"
-var buildDate = "2025010901"
+var buildNumber = "8"
+var buildDate = "2025020201"
 
 func FullText() string {
 	return "LoCyanFrp " + version + "-" + buildNumber + " #" + buildDate
