@@ -2,7 +2,9 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/fatedier/frp/pkg/msg"
+	"github.com/fatedier/frp/pkg/util/version"
 	"io"
 	"net/http"
 	"net/url"
@@ -18,6 +20,7 @@ var apiV2Url = "https://api.locyanfrp.cn/v2/frp"
 var tr = &http.Transport{
 	DisableKeepAlives: true,
 }
+var ua = fmt.Sprintf("LoCyanFrp/1.0 (Frp; %s)", version.FullText())
 
 // NewApiService LoCyanFrp API service
 func NewApiService() (s *V2Service, err error) {
@@ -38,7 +41,13 @@ func (s V2Service) ProxyStartGetCfg(frpToken string, proxyId string) (cfg string
 
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get(api.String())
+	req, err := http.NewRequest(http.MethodGet, api.String(), nil)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("User-Agent", ua)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
@@ -75,14 +84,17 @@ func (s V2Service) SubmitRunId(apiToken string, nodeId int, pMsg *msg.NewProxy, 
 	values.Set("run_id", runId)
 	values.Set("proxy_name", name)
 	values.Set("api_token", apiToken+"|"+strconv.Itoa(nodeId))
-	api.RawQuery = values.Encode()
-	defer func(u *url.URL) {
-		u.RawQuery = ""
-	}(api)
 
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Post(api.String(), "application/json", strings.NewReader(values.Encode()))
+	req, err := http.NewRequest(http.MethodPost, api.String(), strings.NewReader(values.Encode()))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", ua)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
@@ -104,7 +116,13 @@ func (s V2Service) FrpTokenCheck(frpToken string, apiToken string, nodeId int) (
 
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get(api.String())
+	req, err := http.NewRequest(http.MethodGet, api.String(), nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("User-Agent", ua)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -193,7 +211,13 @@ func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken stri
 
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get(api.String())
+	req, err := http.NewRequest(http.MethodGet, api.String(), nil)
+	if err != nil {
+		return false, err
+	}
+	req.Header.Set("User-Agent", ua)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return false, err
 	}
@@ -234,7 +258,13 @@ func (s V2Service) GetLimit(frpToken string, apiToken string, nodeId int) (inLim
 
 	client := &http.Client{Transport: tr}
 
-	resp, err := client.Get(api.String())
+	req, err := http.NewRequest(http.MethodGet, api.String(), nil)
+	if err != nil {
+		return 1280, 1280, err
+	}
+	req.Header.Set("User-Agent", ua)
+
+	resp, err := client.Do(req)
 	if err != nil {
 		return 1280, 1280, err
 	}
