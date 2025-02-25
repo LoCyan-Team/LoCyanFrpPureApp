@@ -2,9 +2,7 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/fatedier/frp/pkg/msg"
-	"github.com/fatedier/frp/pkg/util/version"
 	"io"
 	"net/http"
 	"net/url"
@@ -16,12 +14,6 @@ import (
 type V2Service struct {
 }
 
-var apiV2Url = "https://api.locyanfrp.cn/v2/frp"
-var tr = &http.Transport{
-	DisableKeepAlives: true,
-}
-var ua = fmt.Sprintf("LoCyanFrp/1.0 (Frp; %s)", version.FullText())
-
 // NewApiService LoCyanFrp API service
 func NewApiService() (s *V2Service, err error) {
 	return &V2Service{}, nil
@@ -29,25 +21,11 @@ func NewApiService() (s *V2Service, err error) {
 
 // ProxyStartGetCfg 简单启动获取Cfg
 func (s V2Service) ProxyStartGetCfg(frpToken string, proxyId string) (cfg string, err error) {
-	api, _ := url.Parse(apiV2Url + "/client/config")
 	values := url.Values{}
 	values.Set("frp_token", frpToken)
 	values.Set("proxy_id", proxyId)
-	// Encode 请求参数
-	api.RawQuery = values.Encode()
-	defer func(u *url.URL) {
-		u.RawQuery = ""
-	}(api)
 
-	client := &http.Client{Transport: tr}
-
-	req, err := http.NewRequest(http.MethodGet, api.String(), nil)
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("User-Agent", ua)
-
-	resp, err := client.Do(req)
+	resp, err := RequestApi("/client/config", http.MethodGet, values, nil)
 	if err != nil {
 		return "", err
 	}
@@ -76,7 +54,6 @@ func (s V2Service) ProxyStartGetCfg(frpToken string, proxyId string) (cfg string
 
 // SubmitRunId 提交runID至服务器
 func (s V2Service) SubmitRunId(apiToken string, nodeId int, pMsg *msg.NewProxy, runId string) (err error) {
-	api, _ := url.Parse(apiV2Url + "/server/run-id")
 	values := url.Values{}
 
 	name := strings.Split(pMsg.ProxyName, ".")[1]
@@ -85,16 +62,7 @@ func (s V2Service) SubmitRunId(apiToken string, nodeId int, pMsg *msg.NewProxy, 
 	values.Set("proxy_name", name)
 	values.Set("api_token", apiToken+"|"+strconv.Itoa(nodeId))
 
-	client := &http.Client{Transport: tr}
-
-	req, err := http.NewRequest(http.MethodPost, api.String(), strings.NewReader(values.Encode()))
-	if err != nil {
-		return err
-	}
-	req.Header.Set("User-Agent", ua)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
-	resp, err := client.Do(req)
+	resp, err := RequestApi("/server/run-id", http.MethodPost, nil, strings.NewReader(values.Encode()))
 	if err != nil {
 		return err
 	}
@@ -105,24 +73,11 @@ func (s V2Service) SubmitRunId(apiToken string, nodeId int, pMsg *msg.NewProxy, 
 
 // FrpTokenCheck 校验客户端 Frp Token
 func (s V2Service) FrpTokenCheck(frpToken string, apiToken string, nodeId int) (ok bool, err error) {
-	api, _ := url.Parse(apiV2Url + "/server/token")
 	values := url.Values{}
 	values.Set("frp_token", frpToken)
 	values.Set("api_token", apiToken+"|"+strconv.Itoa(nodeId))
-	api.RawQuery = values.Encode()
-	defer func(u *url.URL) {
-		u.RawQuery = ""
-	}(api)
 
-	client := &http.Client{Transport: tr}
-
-	req, err := http.NewRequest(http.MethodGet, api.String(), nil)
-	if err != nil {
-		return false, err
-	}
-	req.Header.Set("User-Agent", ua)
-
-	resp, err := client.Do(req)
+	resp, err := RequestApi("/server/token", http.MethodGet, values, nil)
 	if err != nil {
 		return false, err
 	}
@@ -151,7 +106,6 @@ func (s V2Service) FrpTokenCheck(frpToken string, apiToken string, nodeId int) (
 
 // ProxyCheck 校验客户端代理
 func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken string, nodeId int) (ok bool, err error) {
-	api, _ := url.Parse(apiV2Url + "/server/proxy")
 	domains, err := json.Marshal(pMsg.CustomDomains)
 	if err != nil {
 		return false, err
@@ -204,20 +158,7 @@ func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken stri
 	//values.Set("group", pMsg.Group)
 	//values.Set("group_key", pMsg.GroupKey)
 
-	api.RawQuery = values.Encode()
-	defer func(u *url.URL) {
-		u.RawQuery = ""
-	}(api)
-
-	client := &http.Client{Transport: tr}
-
-	req, err := http.NewRequest(http.MethodGet, api.String(), nil)
-	if err != nil {
-		return false, err
-	}
-	req.Header.Set("User-Agent", ua)
-
-	resp, err := client.Do(req)
+	resp, err := RequestApi("/server/proxy", http.MethodGet, values, nil)
 	if err != nil {
 		return false, err
 	}
@@ -246,25 +187,11 @@ func (s V2Service) ProxyCheck(frpToken string, pMsg *msg.NewProxy, apiToken stri
 
 // GetLimit 获取隧道限速信息
 func (s V2Service) GetLimit(frpToken string, apiToken string, nodeId int) (inLimit, outLimit uint64, err error) {
-	api, _ := url.Parse(apiV2Url + "/server/limit")
-	// 这部分就照之前的搬过去了，能跑就行x
 	values := url.Values{}
 	values.Set("frp_token", frpToken)
 	values.Set("api_token", apiToken+"|"+strconv.Itoa(nodeId))
-	api.RawQuery = values.Encode()
-	defer func(u *url.URL) {
-		u.RawQuery = ""
-	}(api)
 
-	client := &http.Client{Transport: tr}
-
-	req, err := http.NewRequest(http.MethodGet, api.String(), nil)
-	if err != nil {
-		return 1280, 1280, err
-	}
-	req.Header.Set("User-Agent", ua)
-
-	resp, err := client.Do(req)
+	resp, err := RequestApi("/server/limit", http.MethodGet, values, nil)
 	if err != nil {
 		return 1280, 1280, err
 	}
