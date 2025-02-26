@@ -56,6 +56,7 @@ const (
         justify-content: center;
         flex-direction: column;
         align-items: center;
+        margin-inline: 0.75rem;
     }
     .container h1 {
         font-weight: 400;
