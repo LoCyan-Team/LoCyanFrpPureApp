@@ -1,6 +1,6 @@
 module github.com/fatedier/frp
 
-go 1.23.0
+go 1.24
 
 require (
 	github.com/armon/go-socks5 v0.0.0-20160902184237-e75332964ef5
@@ -14,7 +14,7 @@ require (
 	github.com/onsi/gomega v1.34.2
 	github.com/pelletier/go-toml/v2 v2.2.0
 	github.com/pion/stun/v2 v2.0.0
-	github.com/pires/go-proxyproto v0.7.0
+	github.com/pires/go-proxyproto v0.8.1
 	github.com/prometheus/client_golang v1.19.1
 	github.com/quic-go/quic-go v0.48.2
 	github.com/rodaine/table v1.3.0
