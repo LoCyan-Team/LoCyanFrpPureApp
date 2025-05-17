@@ -1,3 +1,0 @@
-### WHY
-
-<!-- author to complete -->
