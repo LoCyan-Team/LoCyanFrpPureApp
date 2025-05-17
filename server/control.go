@@ -202,7 +202,7 @@ func NewControl(
 // Start send a login success message to client and start working.
 func (ctl *Control) Start() {
 	loginRespMsg := &msg.LoginResp{
-		Version: version.Full(),
+		Version: version.Version(),
 		RunID:   ctl.runID,
 		Error:   "",
 	}

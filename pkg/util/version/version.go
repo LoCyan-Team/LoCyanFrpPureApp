@@ -14,8 +14,31 @@
 
 package version
 
+import "fmt"
+
+type Custom struct {
+	Build string
+	Mod   string
+}
+
 var version = "0.62.1"
+var custom = Custom{
+	Build: "1",
+	Mod:   "LoCyanFrp",
+}
 
 func Full() string {
+	return fmt.Sprintf("%s-%sb%s", Mod(), Version(), Build())
+}
+
+func Version() string {
 	return version
+}
+
+func Build() string {
+	return custom.Build
+}
+
+func Mod() string {
+	return custom.Mod
 }

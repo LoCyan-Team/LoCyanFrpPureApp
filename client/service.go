@@ -269,7 +269,7 @@ func (svr *Service) login() (conn net.Conn, connector Connector, err error) {
 		Os:        runtime.GOOS,
 		PoolCount: svr.common.Transport.PoolCount,
 		User:      svr.common.User,
-		Version:   version.Full(),
+		Version:   version.Version(),
 		Timestamp: time.Now().Unix(),
 		RunID:     svr.runID,
 		Metas:     svr.common.Metadatas,

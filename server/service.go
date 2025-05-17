@@ -451,7 +451,7 @@ func (svr *Service) handleConnection(ctx context.Context, conn net.Conn, interna
 		if err != nil {
 			xl.Warnf("register control error: %v", err)
 			_ = msg.WriteMsg(conn, &msg.LoginResp{
-				Version: version.Full(),
+				Version: version.Version(),
 				Error:   util.GenerateResponseErrorString("register control error", err, lo.FromPtr(svr.cfg.DetailedErrorsToClient)),
 			})
 			conn.Close()
