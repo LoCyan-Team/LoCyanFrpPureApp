@@ -1,22 +1,10 @@
-// Copyright 2019 fatedier, fatedier@gmail.com
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package limit
 
 import (
 	"context"
 	"io"
+	"sync"
+	"time"
 
 	"golang.org/x/time/rate"
 )
@@ -24,28 +12,52 @@ import (
 type Reader struct {
 	r       io.Reader
 	limiter *rate.Limiter
+	ctx     context.Context
+	mux     sync.Mutex
 }
 
-func NewReader(r io.Reader, limiter *rate.Limiter) *Reader {
+// NewReader returns a reader that implements io.Reader with rate limiting.
+func NewReader(r io.Reader) *Reader {
 	return &Reader{
-		r:       r,
-		limiter: limiter,
+		r:   r,
+		ctx: context.Background(),
+		mux: sync.Mutex{},
 	}
 }
 
-func (r *Reader) Read(p []byte) (n int, err error) {
-	b := r.limiter.Burst()
-	if b < len(p) {
-		p = p[:b]
+func NewReaderWithLimit(r io.Reader, speed uint64) *Reader {
+	rr := &Reader{
+		r:   r,
+		ctx: context.Background(),
+		mux: sync.Mutex{},
 	}
-	n, err = r.r.Read(p)
-	if err != nil {
-		return
-	}
+	rr.SetRateLimit(speed)
+	return rr
+}
 
-	err = r.limiter.WaitN(context.Background(), n)
-	if err != nil {
-		return
+// SetRateLimit sets rate limit (bytes/sec) to the reader.
+func (s *Reader) SetRateLimit(bytesPerSec uint64) {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	s.limiter = rate.NewLimiter(rate.Limit(bytesPerSec), BurstLimit)
+	s.limiter.AllowN(time.Now(), BurstLimit) // spend initial burst
+}
+
+// Read reads bytes into p.
+func (s *Reader) Read(p []byte) (int, error) {
+	s.mux.Lock()
+	defer s.mux.Unlock()
+
+	if s.limiter == nil {
+		return s.r.Read(p)
 	}
-	return
+	n, err := s.r.Read(p)
+	if err != nil {
+		return n, err
+	}
+	if err := s.limiter.WaitN(s.ctx, n); err != nil {
+		return n, err
+	}
+	return n, nil
 }

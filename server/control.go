@@ -16,7 +16,11 @@ package server
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"github.com/fatedier/frp/pkg/api"
+	"github.com/fatedier/frp/pkg/api/server/tunnel"
+	"github.com/fatedier/frp/pkg/util/limit"
 	"net"
 	"runtime/debug"
 	"sync"
@@ -140,6 +144,9 @@ type Control struct {
 	// replace old controller instantly.
 	runID string
 
+	inboundLimit  uint64
+	outboundLimit uint64
+
 	mu sync.RWMutex
 
 	// Server configuration information
@@ -161,6 +168,8 @@ func NewControl(
 	ctlConnEncrypted bool,
 	loginMsg *msg.Login,
 	serverCfg *v1.ServerConfig,
+	inboundLimit uint64,
+	outboundLimit uint64,
 ) (*Control, error) {
 	poolCount := loginMsg.PoolCount
 	if poolCount > int(serverCfg.Transport.MaxPoolCount) {
@@ -182,6 +191,8 @@ func NewControl(
 		xl:            xlog.FromContextSafe(ctx),
 		ctx:           ctx,
 		doneCh:        make(chan struct{}),
+		inboundLimit:  inboundLimit,
+		outboundLimit: outboundLimit,
 	}
 	ctl.lastPing.Store(time.Now())
 
@@ -454,11 +465,79 @@ func (ctl *Control) handleCloseProxy(m msg.Message) {
 }
 
 func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err error) {
+	xl := ctl.xl
 	var pxyConf v1.ProxyConfigurer
 	// Load configures from NewProxy message and validate.
 	pxyConf, err = config.NewProxyConfigurerFromMsg(pxyMsg, ctl.serverCfg)
 	if err != nil {
 		return
+	}
+
+	as, err := api.NewApiService()
+	if err != nil {
+		xl.Errorf("init API service falied: %v", err)
+		return
+	}
+
+	verifyTunnelParams := tunnel.PostTunnelParams{
+		NodeId:     ctl.serverCfg.NodeId,
+		FrpToken:   ctl.loginMsg.User,
+		TunnelName: pxyMsg.ProxyName,
+		TunnelType: pxyMsg.ProxyType,
+	}
+
+	switch pxyMsg.ProxyType {
+	case "tcp":
+	case "udp":
+		verifyTunnelParams.RemotePort = &pxyMsg.RemotePort
+		break
+	case "http":
+	case "https":
+		verifyTunnelParams.Domain = &pxyMsg.CustomDomains
+		verifyTunnelParams.Locations = &pxyMsg.Locations
+		break
+	case "xtcp":
+	case "stcp":
+	case "sudp":
+		verifyTunnelParams.SecretKey = &pxyMsg.Sk
+	}
+
+	rsVerifyTunnel, err := as.Server.Tunnel.PostTunnel(ctl.serverCfg.NodeApiKey, verifyTunnelParams)
+	if err != nil {
+		xl.Errorf("verify tunnel failed: %v", err)
+		return
+	}
+	if rsVerifyTunnel.Status != 200 {
+		return "", errors.New(fmt.Sprintf(
+			"API Error: verify tunnel failed (status: %d, message: %s)",
+			rsVerifyTunnel.Status,
+			rsVerifyTunnel.Message,
+		))
+	}
+
+	rsSubmitRunId, err := as.Server.Tunnel.PutRunId(ctl.serverCfg.NodeApiKey, tunnel.PostRunIdParams{
+		NodeId: ctl.serverCfg.NodeId,
+		RunId:  ctl.runID,
+	})
+	if err != nil {
+		return
+	}
+	if rsSubmitRunId.Status != 200 {
+		return "", errors.New(fmt.Sprintf(
+			"API Error: submit run id failed (status: %d, message: %s)",
+			rsSubmitRunId.Status,
+			rsSubmitRunId.Message,
+		))
+	}
+	var workConn proxy.GetWorkConnFn = ctl.GetWorkConn
+
+	workConn = func() (net.Conn, error) {
+		fconn, err := ctl.GetWorkConn()
+		if err != nil {
+			return nil, err
+		}
+		xl.Infof("client speed limit: %dKB/s (inbound) / %dKB/s (outbound)", ctl.inboundLimit, ctl.outboundLimit)
+		return limit.NewLimitConn(ctl.inboundLimit, ctl.outboundLimit, fconn), nil
 	}
 
 	// User info
@@ -475,7 +554,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		LoginMsg:           ctl.loginMsg,
 		PoolCount:          ctl.poolCount,
 		ResourceController: ctl.rc,
-		GetWorkConnFn:      ctl.GetWorkConn,
+		GetWorkConnFn:      workConn,
 		Configurer:         pxyConf,
 		ServerCfg:          ctl.serverCfg,
 	})

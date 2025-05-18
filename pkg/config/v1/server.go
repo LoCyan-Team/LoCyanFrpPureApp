@@ -96,6 +96,9 @@ type ServerConfig struct {
 	AllowPorts []types.PortsRange `json:"allowPorts,omitempty"`
 
 	HTTPPlugins []HTTPPluginOptions `json:"httpPlugins,omitempty"`
+
+	NodeId     int64  `json:"nodeId,omitempty"`
+	NodeApiKey string `json:"nodeApiKey,omitempty"`
 }
 
 func (c *ServerConfig) Complete() {

@@ -19,6 +19,6 @@ type PostTunnelResponse struct {
 	} `json:"data"`
 }
 
-func PostTunnel(apiKey string, params PostTunnelParams) (response PostTunnelResponse, err error) {
+func (s Service) PostTunnel(apiKey string, params PostTunnelParams) (response PostTunnelResponse, err error) {
 	// TODO
 }
