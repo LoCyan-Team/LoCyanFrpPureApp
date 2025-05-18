@@ -27,25 +27,66 @@ import (
 var NotFoundPagePath = ""
 
 const (
-	NotFound = `<!DOCTYPE html>
+	NotFound = `
+<!DOCTYPE html>
 <html>
 <head>
-<title>Not Found</title>
-<style>
-    body {
-        width: 35em;
-        margin: 0 auto;
-        font-family: Tahoma, Verdana, Arial, sans-serif;
-    }
-</style>
+	<meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,user-scalable=no,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0">
+    <title>无法找到您所请求的网站 | LoCyanFrp</title>
+	<link rel="icon" href="https://www.locyanfrp.cn/favicon.ico" />
 </head>
 <body>
-<h1>The page you requested was not found.</h1>
-<p>Sorry, the page you are looking for is currently unavailable.<br/>
-Please try again later.</p>
-<p>The server is powered by <a href="https://github.com/fatedier/frp">frp</a>.</p>
-<p><em>Faithfully yours, frp.</em></p>
+	<div class="container">
+	    <h1>无法找到您所请求的网站</h1>
+        <p>我们无法找到您所请求的网站，请确认 Frp 客户端已正常启动。</p>
+        <p>We can not find your website, please confirm that Frp client started.</p>
+        <p class="powered-by">Powered by <a target="_blank" href="https://www.locyanfrp.cn">LoCyanFrp</a></p>
+	</div>
 </body>
+<style>
+    * {
+        margin: 0;
+        padding: 0;
+        font-family: 'Microsoft YaHei', Arial, sans-serif;
+    }
+    .container {
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        flex-direction: column;
+        align-items: center;
+        margin-inline: 0.75rem;
+    }
+    .container h1 {
+        font-weight: 400;
+        margin-bottom: 1rem;
+    }
+    .container p {
+        color: gray;
+    }
+    .container .powered-by {
+        margin-top: 2rem;
+    }
+    .container .powered-by a {
+        color: rgb(21, 129, 218);
+        text-decoration: none;
+        transition: 0.3s;
+    }
+    .container .powered-by a:hover {
+        color: rgb(24, 144, 243);
+    }
+</style>
+<style>
+    @media (prefers-color-scheme: dark) {
+        html {
+            background-color: rgb(41, 41, 41);
+        }
+        .container h1 {
+            color: white;
+        }
+    }
+</style>
 </html>
 `
 )
