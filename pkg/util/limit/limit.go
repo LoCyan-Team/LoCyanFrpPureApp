@@ -1,6 +1,7 @@
 package limit
 
 import (
+	"golang.org/x/time/rate"
 	"io"
 	"net"
 )
@@ -27,9 +28,11 @@ type LimitConn struct {
 func NewLimitConn(maxRead, maxWrite uint64, c net.Conn) LimitConn {
 	// 这里不知道为什么要 49 才能对的上真实速度
 	// 49 是根据 wget 速度来取的，测试了 512、1024、2048、4096、8192 等多种速度下都很准确
+	lr := rate.NewLimiter(rate.Limit(maxRead*49), BurstLimit)
+	lw := rate.NewLimiter(rate.Limit(maxWrite*49), BurstLimit)
 	return LimitConn{
-		lr:   NewReaderWithLimit(c, maxRead*49),
-		lw:   NewWriterWithLimit(c, maxWrite*49),
+		lr:   NewReader(c, lr),
+		lw:   NewWriter(c, lw),
 		Conn: c,
 	}
 }

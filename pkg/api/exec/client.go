@@ -33,7 +33,9 @@ func Execute(ctx context.Context, path string, method string, apiKey string, par
 		req, _ := http.NewRequestWithContext(ctx, method, fullURL, bytes.NewBuffer(reqBody))
 
 		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("X-Api-Key", apiKey)
+		if apiKey != "" {
+			req.Header.Set("X-Node-API-Key", apiKey)
+		}
 
 		resp, err = http.DefaultClient.Do(req)
 		if err == nil {

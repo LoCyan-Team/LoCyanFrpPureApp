@@ -2,11 +2,9 @@ package limit
 
 import (
 	"context"
+	"golang.org/x/time/rate"
 	"io"
 	"sync"
-	"time"
-
-	"golang.org/x/time/rate"
 )
 
 type Writer struct {
@@ -17,31 +15,13 @@ type Writer struct {
 }
 
 // NewWriter returns a writer that implements io.Writer with rate limiting.
-func NewWriter(w io.Writer) *Writer {
+func NewWriter(w io.Writer, limiter *rate.Limiter) *Writer {
 	return &Writer{
-		w:   w,
-		ctx: context.Background(),
-		mux: sync.Mutex{},
+		w:       w,
+		limiter: limiter,
+		ctx:     context.Background(),
+		mux:     sync.Mutex{},
 	}
-}
-
-func NewWriterWithLimit(w io.Writer, speed uint64) *Writer {
-	ww := &Writer{
-		w:   w,
-		ctx: context.Background(),
-		mux: sync.Mutex{},
-	}
-	ww.SetRateLimit(speed)
-	return ww
-}
-
-// SetRateLimit sets rate limit (bytes/sec) to the writer.
-func (s *Writer) SetRateLimit(bytesPerSec uint64) {
-	s.mux.Lock()
-	defer s.mux.Unlock()
-
-	s.limiter = rate.NewLimiter(rate.Limit(bytesPerSec), BurstLimit)
-	s.limiter.AllowN(time.Now(), BurstLimit) // spend initial burst
 }
 
 // Write writes bytes from p.

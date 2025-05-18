@@ -2,11 +2,9 @@ package limit
 
 import (
 	"context"
+	"golang.org/x/time/rate"
 	"io"
 	"sync"
-	"time"
-
-	"golang.org/x/time/rate"
 )
 
 type Reader struct {
@@ -17,31 +15,13 @@ type Reader struct {
 }
 
 // NewReader returns a reader that implements io.Reader with rate limiting.
-func NewReader(r io.Reader) *Reader {
+func NewReader(r io.Reader, limiter *rate.Limiter) *Reader {
 	return &Reader{
-		r:   r,
-		ctx: context.Background(),
-		mux: sync.Mutex{},
+		r:       r,
+		limiter: limiter,
+		ctx:     context.Background(),
+		mux:     sync.Mutex{},
 	}
-}
-
-func NewReaderWithLimit(r io.Reader, speed uint64) *Reader {
-	rr := &Reader{
-		r:   r,
-		ctx: context.Background(),
-		mux: sync.Mutex{},
-	}
-	rr.SetRateLimit(speed)
-	return rr
-}
-
-// SetRateLimit sets rate limit (bytes/sec) to the reader.
-func (s *Reader) SetRateLimit(bytesPerSec uint64) {
-	s.mux.Lock()
-	defer s.mux.Unlock()
-
-	s.limiter = rate.NewLimiter(rate.Limit(bytesPerSec), BurstLimit)
-	s.limiter.AllowN(time.Now(), BurstLimit) // spend initial burst
 }
 
 // Read reads bytes into p.
