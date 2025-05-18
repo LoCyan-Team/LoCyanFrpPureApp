@@ -516,8 +516,9 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 	}
 
 	rsSubmitRunId, err := as.Server.Tunnel.PutRunId(ctl.serverCfg.NodeApiKey, tunnel.PostRunIdParams{
-		NodeId: ctl.serverCfg.NodeId,
-		RunId:  ctl.runID,
+		NodeId:   ctl.serverCfg.NodeId,
+		TunnelId: rsVerifyTunnel.Data.TunnelId,
+		RunId:    ctl.runID,
 	})
 	if err != nil {
 		return

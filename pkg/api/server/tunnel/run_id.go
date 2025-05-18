@@ -1,8 +1,18 @@
 package tunnel
 
+import (
+	"context"
+	"encoding/json"
+	_api "github.com/fatedier/frp/pkg/api/exec"
+	"io"
+	"net/http"
+	"time"
+)
+
 type PostRunIdParams struct {
-	NodeId int64
-	RunId  string
+	NodeId   int64
+	TunnelId int64
+	RunId    string
 }
 
 type PostRunIdResponse struct {
@@ -11,6 +21,23 @@ type PostRunIdResponse struct {
 	Data    struct{} `json:"data"`
 }
 
-func (s Service) PutRunId(apiKey string, params PostRunIdParams) (response PostRunIdResponse, err error) {
-	// TODO
+func (s Service) PutRunId(apiKey string, params PostRunIdParams) (response *PostRunIdResponse, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
+	defer cancel()
+
+	rs, err := _api.Execute(ctx, "/server/run-id", http.MethodPut, apiKey, params)
+	if err != nil {
+		return nil, err
+	}
+	defer rs.Body.Close()
+
+	bodyBytes, err := io.ReadAll(rs.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := json.Unmarshal(bodyBytes, &response); err != nil {
+		return nil, err
+	}
+	return response, nil
 }
