@@ -47,7 +47,7 @@ func init() {
 	for _, typ := range proxyTypes {
 		c := v1.NewProxyConfigurerByType(typ)
 		if c == nil {
-			panic("proxy type: " + typ + " not support")
+			panic("隧道类型: " + typ + " 不支持")
 		}
 		clientCfg := v1.ClientCommonConfig{}
 		cmd := NewProxyCommand(string(typ), c, &clientCfg)
@@ -58,7 +58,7 @@ func init() {
 		if slices.Contains(visitorTypes, v1.VisitorType(typ)) {
 			vc := v1.NewVisitorConfigurerByType(v1.VisitorType(typ))
 			if vc == nil {
-				panic("visitor type: " + typ + " not support")
+				panic("visitor 类型: " + typ + " 不支持")
 			}
 			visitorCmd := NewVisitorCommand(string(typ), vc, &clientCfg)
 			config.RegisterVisitorFlags(visitorCmd, vc)

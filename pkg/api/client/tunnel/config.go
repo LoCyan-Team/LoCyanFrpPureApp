@@ -1,9 +1,8 @@
 package tunnel
 
 type GetConfigParams struct {
-	FrpToken   string
-	NodeId     int64
-	TunnelName string
+	FrpToken string
+	TunnelId int64
 }
 
 type GetConfigResponse struct {

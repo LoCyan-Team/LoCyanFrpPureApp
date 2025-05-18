@@ -17,10 +17,13 @@ package sub
 import (
 	"context"
 	"fmt"
+	"github.com/fatedier/frp/pkg/api"
+	"github.com/fatedier/frp/pkg/api/client/tunnel"
 	"io/fs"
 	"os"
 	"os/signal"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"syscall"
 	"time"
@@ -41,18 +44,24 @@ var (
 	cfgDir           string
 	showVersion      bool
 	strictConfigMode bool
+	//quickStart       string
+	lcfFrpToken  string
+	lcfTunnelIds []int64
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "./frpc.ini", "config file of frpc")
-	rootCmd.PersistentFlags().StringVarP(&cfgDir, "config_dir", "", "", "config directory, run one frpc service for each file in config directory")
-	rootCmd.PersistentFlags().BoolVarP(&showVersion, "version", "v", false, "version of frpc")
-	rootCmd.PersistentFlags().BoolVarP(&strictConfigMode, "strict_config", "", true, "strict config parsing mode, unknown fields will cause an errors")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "./config.json", "指定 Frp 客户端配置文件")
+	rootCmd.PersistentFlags().StringVarP(&cfgDir, "config_dir", "", "configs", "指定配置文件夹，一个文件将运行一个 Frp 客户端服务")
+	rootCmd.PersistentFlags().BoolVarP(&showVersion, "version", "v", false, "Frp 客户端版本")
+	rootCmd.PersistentFlags().BoolVarP(&strictConfigMode, "strict_config", "", true, "严格配置解析模式，未知配置将产生错误")
+	//rootCmd.PersistentFlags().StringVarP(&quickStart, "start", "s", "", "LoCyanFrp 快速启动隧道")
+	rootCmd.PersistentFlags().StringVarP(&lcfFrpToken, "token", "u", "", "LoCyanFrp 用户访问令牌")
+	rootCmd.PersistentFlags().Int64SliceVarP(&lcfTunnelIds, "id", "p", nil, "LoCyanFrp 隧道 ID 列表")
 }
 
 var rootCmd = &cobra.Command{
 	Use:   "frpc",
-	Short: "frpc is the client of frp (https://github.com/fatedier/frp)",
+	Short: "frpc 是 Frp 的客户端，当前程序由乐青映射定制 (https://github.com/LoCyan-Team/LoCyanFrpPureApp)",
 	RunE: func(cmd *cobra.Command, args []string) error {
 		if showVersion {
 			fmt.Println(version.Full())
@@ -63,6 +72,15 @@ var rootCmd = &cobra.Command{
 		// Note that it's only designed for testing. It's not guaranteed to be stable.
 		if cfgDir != "" {
 			_ = runMultipleClients(cfgDir)
+			return nil
+		}
+
+		if lcfFrpToken != "" && len(lcfTunnelIds) > 0 {
+			err := quickStartClient(lcfFrpToken, lcfTunnelIds)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 			return nil
 		}
 
@@ -88,7 +106,7 @@ func runMultipleClients(cfgDir string) error {
 			defer wg.Done()
 			err := runClient(path)
 			if err != nil {
-				fmt.Printf("frpc service error for config file [%s]\n", path)
+				fmt.Printf("Frp 客户端配置 [%s] 启动错误：%s\n", path, err)
 			}
 		}()
 		return nil
@@ -117,8 +135,8 @@ func runClient(cfgFilePath string) error {
 		return err
 	}
 	if isLegacyFormat {
-		fmt.Printf("WARNING: ini format is deprecated and the support will be removed in the future, " +
-			"please use yaml/json/toml format instead!\n")
+		fmt.Printf("警告: INI 格式已弃用，将于未来版本的 Frp 移除，" +
+			"请使用 JSON/TOML/YAML 格式配置代替！\n")
 	}
 
 	if len(cfg.FeatureGates) > 0 {
@@ -129,7 +147,7 @@ func runClient(cfgFilePath string) error {
 
 	warning, err := validation.ValidateAllClientConfig(cfg, proxyCfgs, visitorCfgs)
 	if warning != nil {
-		fmt.Printf("WARNING: %v\n", warning)
+		fmt.Printf("警告: %v\n", warning)
 	}
 	if err != nil {
 		return err
@@ -146,8 +164,8 @@ func startService(
 	log.InitLogger(cfg.Log.To, cfg.Log.Level, int(cfg.Log.MaxDays), cfg.Log.DisablePrintColor)
 
 	if cfgFile != "" {
-		log.Infof("start frpc service for config file [%s]", cfgFile)
-		defer log.Infof("frpc service for config file [%s] stopped", cfgFile)
+		log.Infof("为配置 [%s] 启动服务", cfgFile)
+		defer log.Infof("配置 [%s] 服务已停止", cfgFile)
 	}
 	svr, err := client.NewService(client.ServiceOptions{
 		Common:         cfg,
@@ -165,4 +183,88 @@ func startService(
 		go handleTermSignal(svr)
 	}
 	return svr.Run(context.Background())
+}
+
+// quickStartClient 一键启动
+func quickStartClient(frpToken string, tunnelIds []int64) error {
+	log.Infof("正在从 LoCyanFrp API 获取配置文件...")
+	as, err := api.NewApiService()
+	if err != nil {
+		log.Warnf("初始化 API 服务失败")
+		return err
+	}
+	var wg sync.WaitGroup
+
+	// 新建配置文件文件夹
+	cacheDir := ".lcf-cache"
+
+	_, err = os.Stat(cacheDir)
+	if err != nil {
+		if os.IsNotExist(err) {
+			err := os.Mkdir(cacheDir, os.ModePerm)
+			if err != nil {
+				log.Errorf("创建缓存文件夹出错")
+				return err
+			}
+		} else {
+			log.Errorf("创建缓存文件夹出错")
+			return err
+		}
+	}
+
+	// 每一个都是新的协程
+	for _, tunnelId := range tunnelIds {
+		// 将循环变量赋值给局部变量
+		currentTunnelId := tunnelId
+
+		configPath := filepath.Join(cacheDir, fmt.Sprintf("%s.json", strconv.FormatInt(currentTunnelId, 10)))
+
+		apiGetConfig, err := as.Client.Tunnel.GetConfig(tunnel.GetConfigParams{
+			FrpToken: frpToken,
+			TunnelId: currentTunnelId,
+		})
+		if err != nil {
+			// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
+			log.Errorf("获取配置文件失败")
+			return err
+		}
+		if apiGetConfig.Status != 200 {
+			log.Errorf("获取配置文件失败，API 返回消息: %s", apiGetConfig.Message)
+			return nil
+		}
+
+		wg.Add(1)
+		time.Sleep(time.Millisecond)
+		go func(tunnelId int64, cfgPath string, jsonCfg string) { // 传递必要参数
+			defer wg.Done()
+			// 内部处理文件创建、写入和关闭
+			if err := func() error {
+				configFile, err := os.OpenFile(cfgPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
+				if err != nil {
+					fmt.Printf("Frp 客户端隧道 [%s] 打开配置文件出错: %v", strconv.FormatInt(tunnelId, 10), err)
+					return err
+				}
+				defer configFile.Close()
+
+				_, err = configFile.WriteString(jsonCfg)
+				if err != nil {
+					fmt.Printf("Frp 客户端隧道 [%s] 写入配置文件出错: %v", strconv.FormatInt(tunnelId, 10), err)
+					return err
+				}
+				return nil
+			}(); err != nil {
+				os.Exit(1)
+				return // 如果文件操作失败，直接退出
+			}
+
+			err := runClient(cfgPath)
+			if err != nil {
+				fmt.Printf("Frp 客户端隧道 [%s] 启动出错: %v", strconv.FormatInt(tunnelId, 10), err)
+				os.Exit(1)
+			}
+		}(currentTunnelId, configPath, apiGetConfig.Data.Config) // 传递参数
+	}
+
+	wg.Wait()
+	return nil
 }
