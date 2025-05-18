@@ -18,7 +18,10 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"github.com/fatedier/frp/pkg/api"
+	"github.com/fatedier/frp/pkg/api/server/user"
 	"io"
 	"net"
 	"net/http"
@@ -591,8 +594,41 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 		return err
 	}
 
+	as, err := api.NewApiService()
+	if err != nil {
+		return err
+	}
+	rsVerifyToken, err := as.Server.User.PostToken(svr.cfg.NodeApiKey, user.PostTokenParams{
+		NodeId:   svr.cfg.NodeId,
+		FrpToken: loginMsg.User,
+	})
+	if err != nil {
+		return err
+	}
+	if rsVerifyToken.Status != 200 {
+		return errors.New(fmt.Sprintf(
+			"API Error: verify frp token failed (status: %d, message: %s)",
+			rsVerifyToken.Status,
+			rsVerifyToken.Message,
+		))
+	}
+	rsGetLimit, err := as.Server.User.GetSpeedLimit(svr.cfg.NodeApiKey, user.GetSpeedLimitParams{
+		NodeId:   svr.cfg.NodeId,
+		FrpToken: loginMsg.User,
+	})
+	if err != nil {
+		return err
+	}
+	if rsGetLimit.Status != 200 {
+		return errors.New(fmt.Sprintf(
+			"API Error: get speed limit failed (status: %d, message: %s)",
+			rsVerifyToken.Status,
+			rsVerifyToken.Message,
+		))
+	}
+
 	// TODO(fatedier): use SessionContext
-	ctl, err := NewControl(ctx, svr.rc, svr.pxyManager, svr.pluginManager, authVerifier, ctlConn, !internal, loginMsg, svr.cfg)
+	ctl, err := NewControl(ctx, svr.rc, svr.pxyManager, svr.pluginManager, authVerifier, ctlConn, !internal, loginMsg, svr.cfg, uint64(rsGetLimit.Data.Inbound), uint64(rsGetLimit.Data.Outbound))
 	if err != nil {
 		xl.Warnf("create new controller error: %v", err)
 		// don't return detailed errors to client

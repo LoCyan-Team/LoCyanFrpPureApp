@@ -1,4 +1,4 @@
-package tunnel
+package user
 
 type GetSpeedLimitParams struct {
 	NodeId   int64

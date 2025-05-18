@@ -1,4 +1,4 @@
-package tunnel
+package user
 
 type PostTokenParams struct {
 	NodeId   int64
@@ -12,4 +12,5 @@ type PostTokenResponse struct {
 }
 
 func (s Service) PostToken(apiKey string, params PostTokenParams) (response PostTokenResponse, err error) {
+	// TODO
 }
