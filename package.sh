@@ -43,7 +43,7 @@ for os in $os_all; do
                 mkdir ${frp_path}
                 mv ./frpc_${os}_${arch}.exe ${frp_path}/frpc.exe
                 mv ./frps_${os}_${arch}.exe ${frp_path}/frps.exe
-            else if [ "x${os}" = x"android" ]; then
+            elif [ "x${os}" = x"android" ]; then
                 if [ ! -f "./frpc_${os}_${arch}.so" ]; then
                     continue
                 fi
