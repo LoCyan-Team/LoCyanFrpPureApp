@@ -35,3 +35,5 @@ app:
 	@mv ./release/frps_windows_amd64 ./release/frps_windows_amd64.exe
 	@mv ./release/frpc_windows_arm64 ./release/frpc_windows_arm64.exe
 	@mv ./release/frps_windows_arm64 ./release/frps_windows_arm64.exe
+	@mv ./release/frpc_android_arm64 ./release/frpc_android_arm64.so
+	@mv ./release/frps_android_arm64 ./release/frps_android_arm64.so
