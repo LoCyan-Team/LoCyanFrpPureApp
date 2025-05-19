@@ -27,7 +27,7 @@ func (s Service) GetSpeedLimit(apiKey string, params GetSpeedLimitParams) (respo
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
-	rs, err := _api.Execute(ctx, "/server/speed-limit", http.MethodGet, apiKey, params)
+	rs, err := _api.Execute(ctx, "/server/user/speed-limit", http.MethodGet, apiKey, params)
 	if err != nil {
 		return nil, err
 	}

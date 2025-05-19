@@ -10,8 +10,8 @@ import (
 )
 
 type GetConfigParams struct {
-	FrpToken string
-	TunnelId int64
+	FrpToken string `json:"frp_token"`
+	TunnelId int64  `json:"tunnel_id"`
 }
 
 type GetConfigResponse struct {
@@ -26,7 +26,7 @@ func (s Service) GetConfig(params GetConfigParams) (response *GetConfigResponse,
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
-	rs, err := _api.Execute(ctx, "/client/config", http.MethodPut, "", params)
+	rs, err := _api.Execute(ctx, "/client/tunnel/config", http.MethodGet, "", params)
 	if err != nil {
 		return nil, err
 	}

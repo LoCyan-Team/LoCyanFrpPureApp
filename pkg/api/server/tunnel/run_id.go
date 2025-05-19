@@ -25,7 +25,7 @@ func (s Service) PutRunId(apiKey string, params PostRunIdParams) (response *Post
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
-	rs, err := _api.Execute(ctx, "/server/run-id", http.MethodPut, apiKey, params)
+	rs, err := _api.Execute(ctx, "/server/tunnel/run-id", http.MethodPut, apiKey, params)
 	if err != nil {
 		return nil, err
 	}

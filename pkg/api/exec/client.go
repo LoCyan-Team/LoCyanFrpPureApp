@@ -5,7 +5,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"github.com/fatedier/frp/pkg/util/log"
+	"github.com/fatedier/frp/pkg/util/version"
+	"io"
 	"net/http"
 	"net/url"
 )
@@ -22,19 +25,45 @@ func Execute(ctx context.Context, path string, method string, apiKey string, par
 			continue
 		}
 
-		var reqBody []byte
-		if params != nil {
-			reqBody, err = json.Marshal(params)
-			if err != nil {
-				return nil, err
-			}
+		req, err := http.NewRequestWithContext(ctx, method, fullURL, nil)
+		if err != nil {
+			return nil, err
 		}
 
-		req, _ := http.NewRequestWithContext(ctx, method, fullURL, bytes.NewBuffer(reqBody))
-
 		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("User-Agent", fmt.Sprintf("LoCyanFrp/2.0 (Frp; %s)", version.Full()))
 		if apiKey != "" {
 			req.Header.Set("X-Node-API-Key", apiKey)
+		}
+
+		if params != nil {
+			switch method {
+			case http.MethodGet, http.MethodDelete:
+				query := req.URL.Query()
+
+				paramBytes, err := json.Marshal(params)
+				if err != nil {
+					return nil, err
+				}
+
+				var paramMap map[string]interface{}
+				err = json.Unmarshal(paramBytes, &paramMap)
+				if err != nil {
+					return nil, err
+				}
+
+				for key, value := range paramMap {
+					query.Add(key, fmt.Sprintf("%v", value))
+				}
+
+				req.URL.RawQuery = query.Encode()
+			case http.MethodPost, http.MethodPut, http.MethodPatch:
+				body, err := json.Marshal(params)
+				if err != nil {
+					return nil, err
+				}
+				req.Body = io.NopCloser(bytes.NewBuffer(body))
+			}
 		}
 
 		resp, err = http.DefaultClient.Do(req)

@@ -24,7 +24,7 @@ func (s Service) PostToken(apiKey string, params PostTokenParams) (response *Pos
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
-	rs, err := _api.Execute(ctx, "/server/token", http.MethodPost, apiKey, params)
+	rs, err := _api.Execute(ctx, "/server/user/token", http.MethodPost, apiKey, params)
 	if err != nil {
 		return nil, err
 	}
