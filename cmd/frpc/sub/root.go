@@ -88,7 +88,7 @@ var rootCmd = &cobra.Command{
 		// Do not show command usage here.
 		err := runClient(cfgFile)
 		if err != nil {
-			fmt.Println(err)
+			log.Errorf("启动配置 [%s] 出错: %v", cfgFile, err)
 			os.Exit(1)
 		}
 		return nil
@@ -259,7 +259,7 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 
 			err := runClient(cfgPath)
 			if err != nil {
-				log.Warnf("Frp 客户端隧道 [%s] 启动出错: %v", strconv.FormatInt(tunnelId, 10), err)
+				log.Errorf("Frp 客户端隧道 [%s] 启动出错: %v", strconv.FormatInt(tunnelId, 10), err)
 			}
 		}(currentTunnelId, configPath, apiGetConfig.Data.Config) // 传递参数
 	}
