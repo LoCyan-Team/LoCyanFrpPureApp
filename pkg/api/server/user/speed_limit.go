@@ -10,8 +10,8 @@ import (
 )
 
 type GetSpeedLimitParams struct {
-	NodeId   int64
-	FrpToken string
+	NodeId   int64  `json:"node_id"`
+	FrpToken string `json:"frp_token"`
 }
 
 type GetSpeedLimitResponse struct {
@@ -27,7 +27,7 @@ func (s Service) GetSpeedLimit(apiKey string, params GetSpeedLimitParams) (respo
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
-	rs, err := _api.Execute(ctx, "/server/user/speed-limit", http.MethodGet, apiKey, params)
+	rs, err := _api.Execute(ctx, "/server/user/speed-limit", http.MethodGet, apiKey, params, nil)
 	if err != nil {
 		return nil, err
 	}

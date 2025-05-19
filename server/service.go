@@ -572,10 +572,11 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 	// Otherwise, we check if there is one controller has the same run id. If so, we release previous controller and start new one.
 	var err error
 	if loginMsg.RunID == "" {
-		loginMsg.RunID, err = util.RandID()
+		generated, err := util.RandID()
 		if err != nil {
 			return err
 		}
+		loginMsg.RunID = fmt.Sprintf("%d.%s", svr.cfg.NodeId, generated)
 	}
 
 	ctx := netpkg.NewContextFromConn(ctlConn)
@@ -622,8 +623,8 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 	if rsGetLimit.Status != 200 {
 		return errors.New(fmt.Sprintf(
 			"API Error: get speed limit failed (status: %d, message: %s)",
-			rsVerifyToken.Status,
-			rsVerifyToken.Message,
+			rsGetLimit.Status,
+			rsGetLimit.Message,
 		))
 	}
 

@@ -6,6 +6,8 @@ import (
 	_api "github.com/fatedier/frp/pkg/api/exec"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -34,7 +36,33 @@ func (s Service) PostTunnel(apiKey string, params PostTunnelParams) (response *P
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
-	rs, err := _api.Execute(ctx, "/server/tunnel", http.MethodPost, apiKey, params)
+	body := &url.Values{}
+	body.Set("node_id", strconv.FormatInt(params.NodeId, 10))
+	body.Set("frp_token", params.FrpToken)
+	body.Set("tunnel_name", params.TunnelName)
+	body.Set("tunnel_type", params.TunnelType)
+	body.Set("use_compression", strconv.FormatBool(params.UseCompression))
+	body.Set("use_encryption", strconv.FormatBool(params.UseEncryption))
+	if params.RemotePort != nil {
+		body.Set("remote_port", strconv.Itoa(*params.RemotePort))
+	}
+	if params.Domain != nil {
+		domainSlice := *params.Domain
+		for _, domain := range domainSlice {
+			body.Add("domain", domain)
+		}
+	}
+	if params.Locations != nil {
+		locationSlice := *params.Locations
+		for _, location := range locationSlice {
+			body.Add("locations", location)
+		}
+	}
+	if params.SecretKey != nil {
+		secretKeyString := *params.SecretKey
+		body.Set("secret_key", secretKeyString)
+	}
+	rs, err := _api.Execute(ctx, "/server/tunnel", http.MethodPost, apiKey, nil, body)
 	if err != nil {
 		return nil, err
 	}

@@ -13,7 +13,7 @@ import (
 	"net/url"
 )
 
-func Execute(ctx context.Context, path string, method string, apiKey string, params interface{}) (*http.Response, error) {
+func Execute(ctx context.Context, path string, method string, apiKey string, query interface{}, body *url.Values) (*http.Response, error) {
 	var (
 		fullURL string
 		resp    *http.Response
@@ -30,18 +30,17 @@ func Execute(ctx context.Context, path string, method string, apiKey string, par
 			return nil, err
 		}
 
-		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("User-Agent", fmt.Sprintf("LoCyanFrp/2.0 (Frp; %s)", version.Full()))
 		if apiKey != "" {
 			req.Header.Set("X-Node-API-Key", apiKey)
 		}
 
-		if params != nil {
-			switch method {
-			case http.MethodGet, http.MethodDelete:
-				query := req.URL.Query()
+		switch method {
+		case http.MethodGet, http.MethodDelete:
+			if query != nil {
+				reqQuery := req.URL.Query()
 
-				paramBytes, err := json.Marshal(params)
+				paramBytes, err := json.Marshal(query)
 				if err != nil {
 					return nil, err
 				}
@@ -53,16 +52,15 @@ func Execute(ctx context.Context, path string, method string, apiKey string, par
 				}
 
 				for key, value := range paramMap {
-					query.Add(key, fmt.Sprintf("%v", value))
+					reqQuery.Add(key, fmt.Sprintf("%v", value))
 				}
 
-				req.URL.RawQuery = query.Encode()
-			case http.MethodPost, http.MethodPut, http.MethodPatch:
-				body, err := json.Marshal(params)
-				if err != nil {
-					return nil, err
-				}
-				req.Body = io.NopCloser(bytes.NewBuffer(body))
+				req.URL.RawQuery = reqQuery.Encode()
+			}
+		case http.MethodPost, http.MethodPut, http.MethodPatch:
+			if body != nil {
+				req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+				req.Body = io.NopCloser(bytes.NewBufferString(body.Encode()))
 			}
 		}
 

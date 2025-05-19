@@ -6,6 +6,8 @@ import (
 	_api "github.com/fatedier/frp/pkg/api/exec"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
 	"time"
 )
 
@@ -25,7 +27,11 @@ func (s Service) PutRunId(apiKey string, params PostRunIdParams) (response *Post
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
-	rs, err := _api.Execute(ctx, "/server/tunnel/run-id", http.MethodPut, apiKey, params)
+	body := &url.Values{}
+	body.Set("node_id", strconv.FormatInt(params.NodeId, 10))
+	body.Set("tunnel_id", strconv.FormatInt(params.TunnelId, 10))
+	body.Set("run_id", params.RunId)
+	rs, err := _api.Execute(ctx, "/server/tunnel/run-id", http.MethodPut, apiKey, nil, body)
 	if err != nil {
 		return nil, err
 	}

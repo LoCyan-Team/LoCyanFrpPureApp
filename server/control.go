@@ -23,6 +23,7 @@ import (
 	"github.com/fatedier/frp/pkg/util/limit"
 	"net"
 	"runtime/debug"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -482,7 +483,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 	verifyTunnelParams := tunnel.PostTunnelParams{
 		NodeId:         ctl.serverCfg.NodeId,
 		FrpToken:       ctl.loginMsg.User,
-		TunnelName:     pxyMsg.ProxyName,
+		TunnelName:     strings.Split(pxyMsg.ProxyName, ".")[1],
 		TunnelType:     pxyMsg.ProxyType,
 		UseCompression: pxyMsg.UseCompression,
 		UseEncryption:  pxyMsg.UseEncryption,
