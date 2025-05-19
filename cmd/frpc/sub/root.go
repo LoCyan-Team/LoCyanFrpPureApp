@@ -111,7 +111,7 @@ func runMultipleClients(cfgDir string) error {
 			defer wg.Done()
 			err := runClient(path)
 			if err != nil {
-				log.Warnf("Frp 客户端配置 [%s] 启动错误：%s", path, err)
+				log.Warnf("Frp 客户端配置 [%s] 启动出错：%s", path, err)
 			}
 		}()
 		return nil
