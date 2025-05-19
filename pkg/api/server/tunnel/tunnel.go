@@ -10,14 +10,16 @@ import (
 )
 
 type PostTunnelParams struct {
-	NodeId     int64     `json:"node_id"`
-	FrpToken   string    `json:"frp_token"`
-	TunnelName string    `json:"tunnel_name"`
-	TunnelType string    `json:"tunnel_type"`
-	RemotePort *int      `json:"remote_port"`
-	Domain     *[]string `json:"domain"`
-	Locations  *[]string `json:"locations"`
-	SecretKey  *string   `json:"secret_key"`
+	NodeId         int64     `json:"node_id"`
+	FrpToken       string    `json:"frp_token"`
+	TunnelName     string    `json:"tunnel_name"`
+	TunnelType     string    `json:"tunnel_type"`
+	RemotePort     *int      `json:"remote_port"`
+	UseCompression bool      `json:"use_compression"`
+	UseEncryption  bool      `json:"use_encryption"`
+	Domain         *[]string `json:"domain"`
+	Locations      *[]string `json:"locations"`
+	SecretKey      *string   `json:"secret_key"`
 }
 
 type PostTunnelResponse struct {

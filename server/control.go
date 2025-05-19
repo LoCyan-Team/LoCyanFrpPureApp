@@ -480,10 +480,12 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 	}
 
 	verifyTunnelParams := tunnel.PostTunnelParams{
-		NodeId:     ctl.serverCfg.NodeId,
-		FrpToken:   ctl.loginMsg.User,
-		TunnelName: pxyMsg.ProxyName,
-		TunnelType: pxyMsg.ProxyType,
+		NodeId:         ctl.serverCfg.NodeId,
+		FrpToken:       ctl.loginMsg.User,
+		TunnelName:     pxyMsg.ProxyName,
+		TunnelType:     pxyMsg.ProxyType,
+		UseCompression: pxyMsg.UseCompression,
+		UseEncryption:  pxyMsg.UseEncryption,
 	}
 
 	switch pxyMsg.ProxyType {
