@@ -51,7 +51,7 @@ var (
 
 func init() {
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "./config.json", "指定 Frp 客户端配置文件")
-	rootCmd.PersistentFlags().StringVarP(&cfgDir, "config_dir", "", "configs", "指定配置文件夹，一个文件将运行一个 Frp 客户端服务")
+	rootCmd.PersistentFlags().StringVarP(&cfgDir, "config_dir", "", "", "指定配置文件夹，一个文件将运行一个 Frp 客户端服务")
 	rootCmd.PersistentFlags().BoolVarP(&showVersion, "version", "v", false, "Frp 客户端版本")
 	rootCmd.PersistentFlags().BoolVarP(&strictConfigMode, "strict_config", "", true, "严格配置解析模式，未知配置将产生错误")
 	//rootCmd.PersistentFlags().StringVarP(&quickStart, "start", "s", "", "LoCyanFrp 快速启动隧道")
@@ -67,6 +67,7 @@ var rootCmd = &cobra.Command{
 			fmt.Println(version.Full())
 			return nil
 		}
+		log.Infof("欢迎使用 LoCyanFrp 客户端")
 
 		if lcfFrpToken != "" && len(lcfTunnelIds) > 0 {
 			err := quickStartClient(lcfFrpToken, lcfTunnelIds)
@@ -106,7 +107,7 @@ func runMultipleClients(cfgDir string) error {
 			defer wg.Done()
 			err := runClient(path)
 			if err != nil {
-				fmt.Printf("Frp 客户端配置 [%s] 启动错误：%s\n", path, err)
+				log.Warnf("Frp 客户端配置 [%s] 启动错误：%s\n", path, err)
 			}
 		}()
 		return nil
@@ -253,14 +254,12 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 				}
 				return nil
 			}(); err != nil {
-				os.Exit(1)
 				return // 如果文件操作失败，直接退出
 			}
 
 			err := runClient(cfgPath)
 			if err != nil {
-				log.Errorf("Frp 客户端隧道 [%s] 启动出错: %v", strconv.FormatInt(tunnelId, 10), err)
-				os.Exit(1)
+				log.Warnf("Frp 客户端隧道 [%s] 启动出错: %v", strconv.FormatInt(tunnelId, 10), err)
 			}
 		}(currentTunnelId, configPath, apiGetConfig.Data.Config) // 传递参数
 	}
