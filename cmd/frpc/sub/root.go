@@ -192,7 +192,6 @@ func startService(
 
 // quickStartClient 一键启动
 func quickStartClient(frpToken string, tunnelIds []int64) error {
-	log.Infof("正在从 LoCyanFrp API 获取配置文件...")
 	as, err := api.NewApiService()
 	if err != nil {
 		log.Warnf("初始化 API 服务失败")
@@ -219,30 +218,30 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 
 	// 每一个都是新的协程
 	for _, tunnelId := range tunnelIds {
-		// 将循环变量赋值给局部变量
-		currentTunnelId := tunnelId
-
-		configPath := filepath.Join(cacheDir, fmt.Sprintf("%s.json", strconv.FormatInt(currentTunnelId, 10)))
-
-		apiGetConfig, err := as.Client.Tunnel.GetConfig(tunnel.GetConfigParams{
-			FrpToken: frpToken,
-			TunnelId: currentTunnelId,
-		})
-		if err != nil {
-			// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
-			log.Errorf("获取隧道 [%d] 配置文件失败", tunnelId)
-			return err
-		}
-		if apiGetConfig.Status != 200 {
-			log.Errorf("获取隧道 [%d] 配置文件失败，API 返回消息: %s", tunnelId, apiGetConfig.Message)
-			return nil
-		}
+		currentTunnel := tunnelId
 
 		wg.Add(1)
 		time.Sleep(time.Millisecond)
-		go func(tunnelId int64, cfgPath string, jsonCfg string) { // 传递必要参数
+
+		go func(tunnelId int64) {
 			defer wg.Done()
-			// 内部处理文件创建、写入和关闭
+
+			log.Infof("正在从 LoCyanFrp API 获取隧道 [%d] 的配置文件...", tunnelId)
+			cfgPath := filepath.Join(cacheDir, fmt.Sprintf("%s.json", strconv.FormatInt(tunnelId, 10)))
+
+			apiGetConfig, err := as.Client.Tunnel.GetConfig(tunnel.GetConfigParams{
+				FrpToken: frpToken,
+				TunnelId: tunnelId,
+			})
+			if err != nil {
+				log.Errorf("获取隧道 [%d] 配置文件失败", tunnelId)
+				return
+			}
+			if apiGetConfig.Status != 200 {
+				log.Errorf("获取隧道 [%d] 配置文件失败，API 返回消息: %s", tunnelId, apiGetConfig.Message)
+				return
+			}
+
 			if err := func() error {
 				configFile, err := os.OpenFile(cfgPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 				if err != nil {
@@ -251,21 +250,21 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 				}
 				defer configFile.Close()
 
-				_, err = configFile.WriteString(jsonCfg)
+				_, err = configFile.WriteString(apiGetConfig.Data.Config)
 				if err != nil {
 					log.Errorf("Frp 客户端隧道 [%d] 写入配置文件出错: %v", tunnelId, err)
 					return err
 				}
 				return nil
 			}(); err != nil {
-				return // 如果文件操作失败，直接退出
+				return
 			}
 
-			err := runClient(cfgPath)
+			err = runClient(cfgPath)
 			if err != nil {
 				log.Errorf("Frp 客户端隧道 [%d] 启动出错: %v", tunnelId, err)
 			}
-		}(currentTunnelId, configPath, apiGetConfig.Data.Config) // 传递参数
+		}(currentTunnel)
 	}
 
 	wg.Wait()
