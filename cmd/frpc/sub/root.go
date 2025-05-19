@@ -81,7 +81,11 @@ var rootCmd = &cobra.Command{
 		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
 		// Note that it's only designed for testing. It's not guaranteed to be stable.
 		if cfgDir != "" {
-			_ = runMultipleClients(cfgDir)
+			err := runMultipleClients(cfgDir)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
 			return nil
 		}
 
@@ -107,7 +111,7 @@ func runMultipleClients(cfgDir string) error {
 			defer wg.Done()
 			err := runClient(path)
 			if err != nil {
-				log.Warnf("Frp 客户端配置 [%s] 启动错误：%s\n", path, err)
+				log.Warnf("Frp 客户端配置 [%s] 启动错误：%s", path, err)
 			}
 		}()
 		return nil
@@ -226,11 +230,11 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 		})
 		if err != nil {
 			// 无法获取配置文件，直接关闭软件，防止启动上一个配置文件导致二次报错
-			log.Errorf("获取配置文件失败")
+			log.Errorf("获取隧道 [%d] 配置文件失败", tunnelId)
 			return err
 		}
 		if apiGetConfig.Status != 200 {
-			log.Errorf("获取配置文件失败，API 返回消息: %s", apiGetConfig.Message)
+			log.Errorf("获取隧道 [%d] 配置文件失败，API 返回消息: %s", tunnelId, apiGetConfig.Message)
 			return nil
 		}
 
@@ -242,14 +246,14 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 			if err := func() error {
 				configFile, err := os.OpenFile(cfgPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 				if err != nil {
-					log.Errorf("Frp 客户端隧道 [%s] 打开配置文件出错: %v", strconv.FormatInt(tunnelId, 10), err)
+					log.Errorf("Frp 客户端隧道 [%d] 打开配置文件出错: %v", tunnelId, err)
 					return err
 				}
 				defer configFile.Close()
 
 				_, err = configFile.WriteString(jsonCfg)
 				if err != nil {
-					log.Errorf("Frp 客户端隧道 [%s] 写入配置文件出错: %v", strconv.FormatInt(tunnelId, 10), err)
+					log.Errorf("Frp 客户端隧道 [%d] 写入配置文件出错: %v", tunnelId, err)
 					return err
 				}
 				return nil
@@ -259,7 +263,7 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 
 			err := runClient(cfgPath)
 			if err != nil {
-				log.Errorf("Frp 客户端隧道 [%s] 启动出错: %v", strconv.FormatInt(tunnelId, 10), err)
+				log.Errorf("Frp 客户端隧道 [%d] 启动出错: %v", tunnelId, err)
 			}
 		}(currentTunnelId, configPath, apiGetConfig.Data.Config) // 传递参数
 	}
