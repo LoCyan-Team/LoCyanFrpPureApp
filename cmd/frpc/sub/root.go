@@ -56,7 +56,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&strictConfigMode, "strict_config", "", true, "严格配置解析模式，未知配置将产生错误")
 	//rootCmd.PersistentFlags().StringVarP(&quickStart, "start", "s", "", "LoCyanFrp 快速启动隧道")
 	rootCmd.PersistentFlags().StringVarP(&lcfFrpToken, "token", "u", "", "LoCyanFrp 用户访问令牌")
-	rootCmd.PersistentFlags().Int64SliceVarP(&lcfTunnelIds, "id", "p", nil, "LoCyanFrp 隧道 ID 列表")
+	rootCmd.PersistentFlags().Int64SliceVarP(&lcfTunnelIds, "id", "p", []int64{}, "LoCyanFrp 隧道 ID 列表")
 }
 
 var rootCmd = &cobra.Command{
@@ -68,19 +68,19 @@ var rootCmd = &cobra.Command{
 			return nil
 		}
 
-		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
-		// Note that it's only designed for testing. It's not guaranteed to be stable.
-		if cfgDir != "" {
-			_ = runMultipleClients(cfgDir)
-			return nil
-		}
-
 		if lcfFrpToken != "" && len(lcfTunnelIds) > 0 {
 			err := quickStartClient(lcfFrpToken, lcfTunnelIds)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
+			return nil
+		}
+
+		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
+		// Note that it's only designed for testing. It's not guaranteed to be stable.
+		if cfgDir != "" {
+			_ = runMultipleClients(cfgDir)
 			return nil
 		}
 
