@@ -241,14 +241,14 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 			if err := func() error {
 				configFile, err := os.OpenFile(cfgPath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, os.ModePerm)
 				if err != nil {
-					fmt.Printf("Frp 客户端隧道 [%s] 打开配置文件出错: %v", strconv.FormatInt(tunnelId, 10), err)
+					log.Errorf("Frp 客户端隧道 [%s] 打开配置文件出错: %v", strconv.FormatInt(tunnelId, 10), err)
 					return err
 				}
 				defer configFile.Close()
 
 				_, err = configFile.WriteString(jsonCfg)
 				if err != nil {
-					fmt.Printf("Frp 客户端隧道 [%s] 写入配置文件出错: %v", strconv.FormatInt(tunnelId, 10), err)
+					log.Errorf("Frp 客户端隧道 [%s] 写入配置文件出错: %v", strconv.FormatInt(tunnelId, 10), err)
 					return err
 				}
 				return nil
@@ -259,7 +259,7 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 
 			err := runClient(cfgPath)
 			if err != nil {
-				fmt.Printf("Frp 客户端隧道 [%s] 启动出错: %v", strconv.FormatInt(tunnelId, 10), err)
+				log.Errorf("Frp 客户端隧道 [%s] 启动出错: %v", strconv.FormatInt(tunnelId, 10), err)
 				os.Exit(1)
 			}
 		}(currentTunnelId, configPath, apiGetConfig.Data.Config) // 传递参数
