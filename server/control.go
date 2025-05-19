@@ -490,18 +490,12 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 	}
 
 	switch pxyMsg.ProxyType {
-	case "tcp":
-	case "udp":
+	case "tcp", "udp":
 		verifyTunnelParams.RemotePort = &pxyMsg.RemotePort
-		break
-	case "http":
-	case "https":
-		verifyTunnelParams.Domain = &pxyMsg.CustomDomains
-		verifyTunnelParams.Locations = &pxyMsg.Locations
-		break
-	case "xtcp":
-	case "stcp":
-	case "sudp":
+	case "http", "https":
+		verifyTunnelParams.Domain = pxyMsg.CustomDomains
+		verifyTunnelParams.Locations = pxyMsg.Locations
+	case "xtcp", "stcp", "sudp":
 		verifyTunnelParams.SecretKey = &pxyMsg.Sk
 	}
 

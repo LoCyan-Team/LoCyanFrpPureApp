@@ -12,16 +12,16 @@ import (
 )
 
 type PostTunnelParams struct {
-	NodeId         int64     `json:"node_id"`
-	FrpToken       string    `json:"frp_token"`
-	TunnelName     string    `json:"tunnel_name"`
-	TunnelType     string    `json:"tunnel_type"`
-	RemotePort     *int      `json:"remote_port"`
-	UseCompression bool      `json:"use_compression"`
-	UseEncryption  bool      `json:"use_encryption"`
-	Domain         *[]string `json:"domain"`
-	Locations      *[]string `json:"locations"`
-	SecretKey      *string   `json:"secret_key"`
+	NodeId         int64    `json:"node_id"`
+	FrpToken       string   `json:"frp_token"`
+	TunnelName     string   `json:"tunnel_name"`
+	TunnelType     string   `json:"tunnel_type"`
+	RemotePort     *int     `json:"remote_port"`
+	UseCompression bool     `json:"use_compression"`
+	UseEncryption  bool     `json:"use_encryption"`
+	Domain         []string `json:"domain"`
+	Locations      []string `json:"locations"`
+	SecretKey      *string  `json:"secret_key"`
 }
 
 type PostTunnelResponse struct {
@@ -46,21 +46,14 @@ func (s Service) PostTunnel(apiKey string, params PostTunnelParams) (response *P
 	if params.RemotePort != nil {
 		body.Set("remote_port", strconv.Itoa(*params.RemotePort))
 	}
-	if params.Domain != nil {
-		domainSlice := *params.Domain
-		for _, domain := range domainSlice {
-			body.Add("domain", domain)
-		}
+	for _, domain := range params.Domain {
+		body.Add("domain", domain)
 	}
-	if params.Locations != nil {
-		locationSlice := *params.Locations
-		for _, location := range locationSlice {
-			body.Add("locations", location)
-		}
+	for _, location := range params.Locations {
+		body.Add("locations", location)
 	}
 	if params.SecretKey != nil {
-		secretKeyString := *params.SecretKey
-		body.Set("secret_key", secretKeyString)
+		body.Set("secret_key", *params.SecretKey)
 	}
 	rs, err := _api.Execute(ctx, "/server/tunnel", http.MethodPost, apiKey, nil, body)
 	if err != nil {
