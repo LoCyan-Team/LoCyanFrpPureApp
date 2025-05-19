@@ -10,9 +10,9 @@ import (
 )
 
 type PostRunIdParams struct {
-	NodeId   int64
-	TunnelId int64
-	RunId    string
+	NodeId   int64  `json:"node_id"`
+	TunnelId int64  `json:"tunnel_id"`
+	RunId    string `json:"run_id"`
 }
 
 type PostRunIdResponse struct {
