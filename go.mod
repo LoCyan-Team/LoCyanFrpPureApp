@@ -11,7 +11,7 @@ require (
 	github.com/gorilla/websocket v1.5.3
 	github.com/hashicorp/yamux v0.1.1
 	github.com/onsi/ginkgo/v2 v2.23.4
-	github.com/onsi/gomega v1.36.3
+	github.com/onsi/gomega v1.37.0
 	github.com/pelletier/go-toml/v2 v2.2.0
 	github.com/pion/stun/v2 v2.0.0
 	github.com/pires/go-proxyproto v0.8.1
