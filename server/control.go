@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/api/server/tunnel"
-	"github.com/fatedier/frp/pkg/util/limit"
 	"net"
 	"runtime/debug"
 	"strings"
@@ -29,6 +28,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"golang.org/x/time/rate"
 
 	"github.com/fatedier/frp/pkg/auth"
 	"github.com/fatedier/frp/pkg/config"
