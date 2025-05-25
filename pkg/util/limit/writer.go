@@ -58,4 +58,3 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 	}
 	return
 }
-}
