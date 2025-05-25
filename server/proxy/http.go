@@ -175,8 +175,8 @@ func (pxy *HTTPProxy) GetRealConn(remoteAddr string) (workConn net.Conn, err err
 		rwc = libio.WithCompression(rwc)
 	}
 
-	if pxy.GetLimiter() != nil {
-		rwc = libio.WrapReadWriteCloser(limit.NewReader(rwc, pxy.GetLimiter()), limit.NewWriter(rwc, pxy.GetLimiter()), func() error {
+	if pxy.GetReadLimiter() != nil {
+		rwc = libio.WrapReadWriteCloser(limit.NewReader(rwc, pxy.GetReadLimiter()), limit.NewWriter(rwc, pxy.GetWriteLimiter()), func() error {
 			return rwc.Close()
 		})
 	}

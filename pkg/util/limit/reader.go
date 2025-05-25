@@ -1,43 +1,51 @@
+// Copyright 2019 fatedier, fatedier@gmail.com
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package limit
 
 import (
 	"context"
-	"golang.org/x/time/rate"
 	"io"
-	"sync"
+
+	"golang.org/x/time/rate"
 )
 
 type Reader struct {
 	r       io.Reader
 	limiter *rate.Limiter
-	ctx     context.Context
-	mux     sync.Mutex
 }
 
-// NewReader returns a reader that implements io.Reader with rate limiting.
 func NewReader(r io.Reader, limiter *rate.Limiter) *Reader {
 	return &Reader{
 		r:       r,
 		limiter: limiter,
-		ctx:     context.Background(),
-		mux:     sync.Mutex{},
 	}
 }
 
-// Read reads bytes into p.
-func (s *Reader) Read(p []byte) (int, error) {
-	s.mux.Lock()
-	defer s.mux.Unlock()
-
-	if s.limiter == nil {
-		return s.r.Read(p)
+func (r *Reader) Read(p []byte) (n int, err error) {
+	b := r.limiter.Burst()
+	if b < len(p) {
+		p = p[:b]
 	}
-	n, err := s.r.Read(p)
+	n, err = r.r.Read(p)
 	if err != nil {
-		return n, err
+		return
 	}
-	if err := s.limiter.WaitN(s.ctx, n); err != nil {
-		return n, err
+
+	err = r.limiter.WaitN(context.Background(), n)
+	if err != nil {
+		return
 	}
-	return n, nil
+	return
 }

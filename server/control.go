@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/api/server/tunnel"
-	"github.com/fatedier/frp/pkg/util/limit"
 	"net"
 	"runtime/debug"
 	"strings"
@@ -29,6 +28,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"golang.org/x/time/rate"
 
 	"github.com/fatedier/frp/pkg/auth"
 	"github.com/fatedier/frp/pkg/config"
@@ -527,16 +527,9 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 			rsSubmitRunId.Message,
 		))
 	}
-	var workConn proxy.GetWorkConnFn = ctl.GetWorkConn
 
-	workConn = func() (net.Conn, error) {
-		fconn, err := ctl.GetWorkConn()
-		if err != nil {
-			return nil, err
-		}
-		xl.Infof("client speed limit: %dKB/s (inbound) / %dKB/s (outbound)", ctl.inboundLimit, ctl.outboundLimit)
-		return limit.NewLimitConn(ctl.inboundLimit, ctl.outboundLimit, fconn), nil
-	}
+	lr := rate.NewLimiter(rate.Limit(float64(ctl.inboundLimit)), int(ctl.inboundLimit))
+	lw := rate.NewLimiter(rate.Limit(float64(ctl.outboundLimit)), int(ctl.outboundLimit))
 
 	// User info
 	userInfo := plugin.UserInfo{
@@ -552,10 +545,10 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		LoginMsg:           ctl.loginMsg,
 		PoolCount:          ctl.poolCount,
 		ResourceController: ctl.rc,
-		GetWorkConnFn:      workConn,
+		GetWorkConnFn:      ctl.GetWorkConn,
 		Configurer:         pxyConf,
 		ServerCfg:          ctl.serverCfg,
-	})
+	}, lr, lw)
 	if err != nil {
 		return remoteAddr, err
 	}
