@@ -27,7 +27,6 @@ import (
 	libio "github.com/fatedier/golib/io"
 	"golang.org/x/time/rate"
 
-	"github.com/fatedier/frp/pkg/config/types"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/fatedier/frp/pkg/msg"
 	plugin "github.com/fatedier/frp/pkg/plugin/server"
@@ -258,7 +257,7 @@ func (pxy *BaseProxy) handleUserTCPConnection(userConn net.Conn) {
 		defer recycleFn()
 	}
 
-	if pxy.GetLimiter() != nil {
+	if pxy.GetReadLimiter() != nil {
 		local = libio.WrapReadWriteCloser(limit.NewReader(local, pxy.GetReadLimiter()), limit.NewWriter(local, pxy.GetWriteLimiter()), func() error {
 			return local.Close()
 		})
