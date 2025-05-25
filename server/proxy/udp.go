@@ -217,7 +217,7 @@ func (pxy *UDPProxy) Run() (remoteAddr string, err error) {
 			}
 
 			if pxy.GetLimiter() != nil {
-				rwc = libio.WrapReadWriteCloser(limit.NewReader(rwc, pxy.GetLimiter()), limit.NewWriter(rwc, pxy.GetLimiter()), func() error {
+				rwc = libio.WrapReadWriteCloser(limit.NewReader(rwc, pxy.GetReadLimiter()), limit.NewWriter(rwc, pxy.GetWriteLimiter()), func() error {
 					return rwc.Close()
 				})
 			}

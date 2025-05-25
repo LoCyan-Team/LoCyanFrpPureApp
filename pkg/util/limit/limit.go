@@ -16,23 +16,20 @@ const (
 	EB
 )
 
-const BurstLimit = 1024 * 1024 * 1024
-
 type LimitConn struct {
 	net.Conn
 
-	lr io.Reader
-	lw io.Writer
+	lr *rate.Limiter
+	lw *rate.Limiter
 }
 
-func NewLimitConn(maxRead, maxWrite uint64, c net.Conn) LimitConn {
-	// 这里不知道为什么要 49 才能对的上真实速度
-	// 49 是根据 wget 速度来取的，测试了 512、1024、2048、4096、8192 等多种速度下都很准确
-	lr := rate.NewLimiter(rate.Limit(maxRead*49), BurstLimit)
-	lw := rate.NewLimiter(rate.Limit(maxWrite*49), BurstLimit)
+func NewLimitConn(maxRead, maxWrite int64, c net.Conn) LimitConn {
+	// 此处抄袭官方库
+	lr := rate.NewLimiter(rate.Limit(float64(maxRead)), int(maxRead))
+	lw := rate.NewLimiter(rate.Limit(float64(maxWrite)), int(maxWrite))
 	return LimitConn{
-		lr:   NewReader(c, lr),
-		lw:   NewWriter(c, lw),
+		lr:   lr,
+		lw:   lw,
 		Conn: c,
 	}
 }

@@ -55,7 +55,8 @@ type Proxy interface {
 	GetUsedPortsNum() int
 	GetResourceController() *controller.ResourceController
 	GetUserInfo() plugin.UserInfo
-	GetLimiter() *rate.Limiter
+	GetReadLimiter() *rate.Limiter
+	GetWriteLimiter() *rate.Limiter
 	GetLoginMsg() *msg.Login
 	Close()
 }
@@ -68,7 +69,8 @@ type BaseProxy struct {
 	poolCount     int
 	getWorkConnFn GetWorkConnFn
 	serverCfg     *v1.ServerConfig
-	limiter       *rate.Limiter
+	readLimiter   *rate.Limiter
+	writeLimiter  *rate.Limiter
 	userInfo      plugin.UserInfo
 	loginMsg      *msg.Login
 	configurer    v1.ProxyConfigurer
@@ -102,8 +104,12 @@ func (pxy *BaseProxy) GetLoginMsg() *msg.Login {
 	return pxy.loginMsg
 }
 
-func (pxy *BaseProxy) GetLimiter() *rate.Limiter {
-	return pxy.limiter
+func (pxy *BaseProxy) GetReadLimiter() *rate.Limiter {
+	return pxy.readLimiter
+}
+
+func (pxy *BaseProxy) GetWriteLimiter() *rate.Limiter {
+	return pxy.writeLimiter
 }
 
 func (pxy *BaseProxy) GetConfigurer() v1.ProxyConfigurer {
@@ -253,7 +259,7 @@ func (pxy *BaseProxy) handleUserTCPConnection(userConn net.Conn) {
 	}
 
 	if pxy.GetLimiter() != nil {
-		local = libio.WrapReadWriteCloser(limit.NewReader(local, pxy.GetLimiter()), limit.NewWriter(local, pxy.GetLimiter()), func() error {
+		local = libio.WrapReadWriteCloser(limit.NewReader(local, pxy.GetReadLimiter()), limit.NewWriter(local, pxy.GetWriteLimiter()), func() error {
 			return local.Close()
 		})
 	}
@@ -281,15 +287,9 @@ type Options struct {
 	ServerCfg          *v1.ServerConfig
 }
 
-func NewProxy(ctx context.Context, options *Options) (pxy Proxy, err error) {
+func NewProxy(ctx context.Context, options *Options, readLimiter *rate.Limiter, writeLimiter *rate.Limiter) (pxy Proxy, err error) {
 	configurer := options.Configurer
 	xl := xlog.FromContextSafe(ctx).Spawn().AppendPrefix(configurer.GetBaseConfig().Name)
-
-	var limiter *rate.Limiter
-	limitBytes := configurer.GetBaseConfig().Transport.BandwidthLimit.Bytes()
-	if limitBytes > 0 && configurer.GetBaseConfig().Transport.BandwidthLimitMode == types.BandwidthLimitModeServer {
-		limiter = rate.NewLimiter(rate.Limit(float64(limitBytes)), int(limitBytes))
-	}
 
 	basePxy := BaseProxy{
 		name:          configurer.GetBaseConfig().Name,
@@ -298,7 +298,8 @@ func NewProxy(ctx context.Context, options *Options) (pxy Proxy, err error) {
 		poolCount:     options.PoolCount,
 		getWorkConnFn: options.GetWorkConnFn,
 		serverCfg:     options.ServerCfg,
-		limiter:       limiter,
+		readLimiter:   readLimiter,
+		writeLimiter:  writeLimiter,
 		xl:            xl,
 		ctx:           xlog.NewContext(ctx, xl),
 		userInfo:      options.UserInfo,
