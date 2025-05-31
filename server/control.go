@@ -73,7 +73,7 @@ func (cm *ControlManager) Add(runID string, ctl *Control) (old *Control) {
 	return
 }
 
-// we should make sure if it's the same control to prevent delete a new one
+// Del we should make sure if it's the same control to prevent delete a new one
 func (cm *ControlManager) Del(runID string, ctl *Control) {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
@@ -93,7 +93,10 @@ func (cm *ControlManager) Close() error {
 	cm.mu.Lock()
 	defer cm.mu.Unlock()
 	for _, ctl := range cm.ctlsByRunID {
-		ctl.Close()
+		err := ctl.Close()
+		if err != nil {
+			return err
+		}
 	}
 	cm.ctlsByRunID = make(map[string]*Control)
 	return nil
@@ -158,7 +161,7 @@ type Control struct {
 	doneCh chan struct{}
 }
 
-// TODO(fatedier): Referencing the implementation of frpc, encapsulate the input parameters as SessionContext.
+// NewControl TODO(fatedier): Referencing the implementation of frpc, encapsulate the input parameters as SessionContext.
 func NewControl(
 	ctx context.Context,
 	rc *controller.ResourceController,
@@ -230,7 +233,10 @@ func (ctl *Control) Start() {
 }
 
 func (ctl *Control) Close() error {
-	ctl.conn.Close()
+	err := ctl.conn.Close()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
@@ -238,7 +244,10 @@ func (ctl *Control) Replaced(newCtl *Control) {
 	xl := ctl.xl
 	xl.Infof("replaced by client [%s]", newCtl.runID)
 	ctl.runID = ""
-	ctl.conn.Close()
+	err := ctl.conn.Close()
+	if err != nil {
+		return
+	}
 }
 
 func (ctl *Control) RegisterWorkConn(conn net.Conn) error {
@@ -260,7 +269,7 @@ func (ctl *Control) RegisterWorkConn(conn net.Conn) error {
 	}
 }
 
-// When frps get one user connection, we get one work connection from the pool and return it.
+// GetWorkConn When frps get one user connection, we get one work connection from the pool and return it.
 // If no workConn available in the pool, send message to frpc to get one or more
 // and wait until it is available.
 // return an error if wait timeout
@@ -317,13 +326,16 @@ func (ctl *Control) heartbeatWorker() {
 	go wait.Until(func() {
 		if time.Since(ctl.lastPing.Load().(time.Time)) > time.Duration(ctl.serverCfg.Transport.HeartbeatTimeout)*time.Second {
 			xl.Warnf("heartbeat timeout")
-			ctl.conn.Close()
+			err := ctl.conn.Close()
+			if err != nil {
+				return
+			}
 			return
 		}
 	}, time.Second, ctl.doneCh)
 }
 
-// block until Control closed
+// WaitClosed block until Control closed
 func (ctl *Control) WaitClosed() {
 	<-ctl.doneCh
 }
@@ -335,14 +347,20 @@ func (ctl *Control) worker() {
 	go ctl.msgDispatcher.Run()
 
 	<-ctl.msgDispatcher.Done()
-	ctl.conn.Close()
+	err := ctl.conn.Close()
+	if err != nil {
+		return
+	}
 
 	ctl.mu.Lock()
 	defer ctl.mu.Unlock()
 
 	close(ctl.workConnCh)
 	for workConn := range ctl.workConnCh {
-		workConn.Close()
+		err := workConn.Close()
+		if err != nil {
+			return
+		}
 	}
 
 	for _, pxy := range ctl.proxies {
@@ -474,58 +492,63 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		return
 	}
 
-	as, err := api.NewApiService()
-	if err != nil {
-		xl.Errorf("init API service falied: %v", err)
-		return
-	}
+	if ctl.serverCfg.EnableApi {
+		var as *api.V3Service
+		as, err = api.NewApiService()
+		if err != nil {
+			xl.Errorf("init API service falied: %v", err)
+			return
+		}
 
-	verifyTunnelParams := tunnel.PostTunnelParams{
-		NodeId:         ctl.serverCfg.NodeId,
-		FrpToken:       ctl.loginMsg.User,
-		TunnelName:     strings.Split(pxyMsg.ProxyName, ".")[1],
-		TunnelType:     pxyMsg.ProxyType,
-		UseCompression: pxyMsg.UseCompression,
-		UseEncryption:  pxyMsg.UseEncryption,
-	}
+		verifyTunnelParams := tunnel.PostTunnelParams{
+			NodeId:         ctl.serverCfg.NodeId,
+			FrpToken:       ctl.loginMsg.User,
+			TunnelName:     strings.Split(pxyMsg.ProxyName, ".")[1],
+			TunnelType:     pxyMsg.ProxyType,
+			UseCompression: pxyMsg.UseCompression,
+			UseEncryption:  pxyMsg.UseEncryption,
+		}
 
-	switch pxyMsg.ProxyType {
-	case "tcp", "udp":
-		verifyTunnelParams.RemotePort = &pxyMsg.RemotePort
-	case "http", "https":
-		verifyTunnelParams.Domain = pxyMsg.CustomDomains
-		verifyTunnelParams.Locations = pxyMsg.Locations
-	case "xtcp", "stcp", "sudp":
-		verifyTunnelParams.SecretKey = &pxyMsg.Sk
-	}
+		switch pxyMsg.ProxyType {
+		case "tcp", "udp":
+			verifyTunnelParams.RemotePort = &pxyMsg.RemotePort
+		case "http", "https":
+			verifyTunnelParams.Domain = pxyMsg.CustomDomains
+			verifyTunnelParams.Locations = pxyMsg.Locations
+		case "xtcp", "stcp", "sudp":
+			verifyTunnelParams.SecretKey = &pxyMsg.Sk
+		}
 
-	rsVerifyTunnel, err := as.Server.Tunnel.PostTunnel(ctl.serverCfg.NodeApiKey, verifyTunnelParams)
-	if err != nil {
-		xl.Errorf("verify tunnel failed: %v", err)
-		return
-	}
-	if rsVerifyTunnel.Status != 200 {
-		return "", errors.New(fmt.Sprintf(
-			"API Error: verify tunnel failed (status: %d, message: %s)",
-			rsVerifyTunnel.Status,
-			rsVerifyTunnel.Message,
-		))
-	}
+		var rsVerifyTunnel *tunnel.PostTunnelResponse
+		rsVerifyTunnel, err = as.Server.Tunnel.PostTunnel(ctl.serverCfg.NodeApiKey, verifyTunnelParams)
+		if err != nil {
+			xl.Errorf("verify tunnel failed: %v", err)
+			return
+		}
+		if rsVerifyTunnel.Status != 200 {
+			return "", errors.New(fmt.Sprintf(
+				"API Error: verify tunnel failed (status: %d, message: %s)",
+				rsVerifyTunnel.Status,
+				rsVerifyTunnel.Message,
+			))
+		}
 
-	rsSubmitRunId, err := as.Server.Tunnel.PutRunId(ctl.serverCfg.NodeApiKey, tunnel.PostRunIdParams{
-		NodeId:   ctl.serverCfg.NodeId,
-		TunnelId: rsVerifyTunnel.Data.TunnelId,
-		RunId:    ctl.runID,
-	})
-	if err != nil {
-		return
-	}
-	if rsSubmitRunId.Status != 200 {
-		return "", errors.New(fmt.Sprintf(
-			"API Error: submit run id failed (status: %d, message: %s)",
-			rsSubmitRunId.Status,
-			rsSubmitRunId.Message,
-		))
+		var rsSubmitRunId *tunnel.PostRunIdResponse
+		rsSubmitRunId, err = as.Server.Tunnel.PutRunId(ctl.serverCfg.NodeApiKey, tunnel.PostRunIdParams{
+			NodeId:   ctl.serverCfg.NodeId,
+			TunnelId: rsVerifyTunnel.Data.TunnelId,
+			RunId:    ctl.runID,
+		})
+		if err != nil {
+			return
+		}
+		if rsSubmitRunId.Status != 200 {
+			return "", errors.New(fmt.Sprintf(
+				"API Error: submit run id failed (status: %d, message: %s)",
+				rsSubmitRunId.Status,
+				rsSubmitRunId.Message,
+			))
+		}
 	}
 
 	lr := rate.NewLimiter(rate.Limit(float64(ctl.inboundLimit)), int(ctl.inboundLimit))

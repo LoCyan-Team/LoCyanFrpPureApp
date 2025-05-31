@@ -97,6 +97,7 @@ type ServerConfig struct {
 
 	HTTPPlugins []HTTPPluginOptions `json:"httpPlugins,omitempty"`
 
+	EnableApi  bool   `json:"enableApi,omitempty"`
 	NodeId     int64  `json:"nodeId,omitempty"`
 	NodeApiKey string `json:"nodeApiKey,omitempty"`
 }
@@ -123,6 +124,7 @@ func (c *ServerConfig) Complete() {
 	c.UserConnTimeout = util.EmptyOr(c.UserConnTimeout, 10)
 	c.UDPPacketSize = util.EmptyOr(c.UDPPacketSize, 1500)
 	c.NatHoleAnalysisDataReserveHours = util.EmptyOr(c.NatHoleAnalysisDataReserveHours, 7*24)
+	c.EnableApi = util.EmptyOr(c.EnableApi, false)
 }
 
 type AuthServerConfig struct {
