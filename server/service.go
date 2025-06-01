@@ -595,37 +595,56 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 		return err
 	}
 
-	as, err := api.NewApiService()
-	if err != nil {
-		return err
-	}
-	rsVerifyToken, err := as.Server.User.PostToken(svr.cfg.NodeApiKey, user.PostTokenParams{
-		NodeId:   svr.cfg.NodeId,
-		FrpToken: loginMsg.User,
-	})
-	if err != nil {
-		return err
-	}
-	if rsVerifyToken.Status != 200 {
-		return errors.New(fmt.Sprintf(
-			"API Error: verify frp token failed (status: %d, message: %s)",
-			rsVerifyToken.Status,
-			rsVerifyToken.Message,
-		))
-	}
-	rsGetLimit, err := as.Server.User.GetSpeedLimit(svr.cfg.NodeApiKey, user.GetSpeedLimitParams{
-		NodeId:   svr.cfg.NodeId,
-		FrpToken: loginMsg.User,
-	})
-	if err != nil {
-		return err
-	}
-	if rsGetLimit.Status != 200 {
-		return errors.New(fmt.Sprintf(
-			"API Error: get speed limit failed (status: %d, message: %s)",
-			rsGetLimit.Status,
-			rsGetLimit.Message,
-		))
+	var rsGetLimit *user.GetSpeedLimitResponse
+	if svr.cfg.EnableApi {
+		var as *api.V3Service
+		as, err = api.NewApiService()
+		if err != nil {
+			return err
+		}
+
+		var rsVerifyToken *user.PostTokenResponse
+		rsVerifyToken, err = as.Server.User.PostToken(svr.cfg.NodeApiKey, user.PostTokenParams{
+			NodeId:   svr.cfg.NodeId,
+			FrpToken: loginMsg.User,
+		})
+		if err != nil {
+			return err
+		}
+		if rsVerifyToken.Status != 200 {
+			return errors.New(fmt.Sprintf(
+				"API Error: verify frp token failed (status: %d, message: %s)",
+				rsVerifyToken.Status,
+				rsVerifyToken.Message,
+			))
+		}
+
+		rsGetLimit, err = as.Server.User.GetSpeedLimit(svr.cfg.NodeApiKey, user.GetSpeedLimitParams{
+			NodeId:   svr.cfg.NodeId,
+			FrpToken: loginMsg.User,
+		})
+		if err != nil {
+			return err
+		}
+		if rsGetLimit.Status != 200 {
+			return errors.New(fmt.Sprintf(
+				"API Error: get speed limit failed (status: %d, message: %s)",
+				rsGetLimit.Status,
+				rsGetLimit.Message,
+			))
+		}
+	} else {
+		rsGetLimit = &user.GetSpeedLimitResponse{
+			Status:  200,
+			Message: "OK",
+			Data: struct {
+				Inbound  int64 `json:"inbound"`
+				Outbound int64 `json:"outbound"`
+			}{
+				Inbound:  10000000,
+				Outbound: 10000000,
+			},
+		}
 	}
 
 	// TODO(fatedier): use SessionContext
