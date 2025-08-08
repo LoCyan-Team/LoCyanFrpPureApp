@@ -25,12 +25,12 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/tidwall/gjson v1.18.0
 	github.com/vishvananda/netlink v1.3.1
-	github.com/xtaci/kcp-go/v5 v5.6.13
+	github.com/xtaci/kcp-go/v5 v5.6.24
 	golang.org/x/crypto v0.38.0
 	golang.org/x/net v0.39.0
 	golang.org/x/oauth2 v0.28.0
 	golang.org/x/sync v0.16.0
-	golang.org/x/time v0.11.0
+	golang.org/x/time v0.12.0
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
 	gopkg.in/ini.v1 v1.67.0
 	k8s.io/apimachinery v0.33.1
@@ -61,8 +61,6 @@ require (
 	github.com/prometheus/client_model v0.6.1 // indirect
 	github.com/prometheus/common v0.62.0 // indirect
 	github.com/prometheus/procfs v0.15.1 // indirect
-	github.com/templexxx/cpu v0.1.1 // indirect
-	github.com/templexxx/xorsimd v0.4.3 // indirect
 	github.com/tidwall/match v1.1.1 // indirect
 	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
