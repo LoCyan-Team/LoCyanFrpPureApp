@@ -27,7 +27,7 @@ require (
 	github.com/vishvananda/netlink v1.3.1
 	github.com/xtaci/kcp-go/v5 v5.6.24
 	golang.org/x/crypto v0.41.0
-	golang.org/x/net v0.42.0
+	golang.org/x/net v0.43.0
 	golang.org/x/oauth2 v0.28.0
 	golang.org/x/sync v0.16.0
 	golang.org/x/time v0.12.0
