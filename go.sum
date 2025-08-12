@@ -280,8 +280,8 @@ gvisor.dev/gvisor v0.0.0-20230927004350-cbd86285d259 h1:TbRPT0HtzFP3Cno1zZo7yPzE
 gvisor.dev/gvisor v0.0.0-20230927004350-cbd86285d259/go.mod h1:AVgIgHMwK63XvmAzWG9vLQ41YnVHN0du0tEC46fI7yY=
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
-k8s.io/apimachinery v0.33.1 h1:mzqXWV8tW9Rw4VeW9rEkqvnxj59k1ezDUl20tFK/oM4=
-k8s.io/apimachinery v0.33.1/go.mod h1:BHW0YOu7n22fFv/JkYOEfkUYNRN0fj0BlvMFWA7b+SM=
+k8s.io/apimachinery v0.33.3 h1:4ZSrmNa0c/ZpZJhAgRdcsFcZOw1PQU1bALVQ0B3I5LA=
+k8s.io/apimachinery v0.33.3/go.mod h1:BHW0YOu7n22fFv/JkYOEfkUYNRN0fj0BlvMFWA7b+SM=
 k8s.io/client-go v0.28.8 h1:TE59Tjd87WKvS2FPBTfIKLFX0nQJ4SSHsnDo5IHjgOw=
 k8s.io/client-go v0.28.8/go.mod h1:uDVQ/rPzWpWIy40c6lZ4mUwaEvRWGnpoqSO4FM65P3o=
 k8s.io/klog/v2 v2.130.1 h1:n9Xl7H1Xvksem4KFG4PYbdQCQxqc/tTUyrgXaOhHSzk=
