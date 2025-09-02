@@ -33,7 +33,7 @@ require (
 	golang.org/x/time v0.12.0
 	golang.zx2c4.com/wireguard v0.0.0-20231211153847-12269c276173
 	gopkg.in/ini.v1 v1.67.0
-	k8s.io/apimachinery v0.33.1
+	k8s.io/apimachinery v0.34.0
 	k8s.io/client-go v0.28.8
 )
 
@@ -67,6 +67,7 @@ require (
 	github.com/vishvananda/netns v0.0.5 // indirect
 	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/mock v0.5.0 // indirect
+	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	golang.org/x/mod v0.26.0 // indirect
 	golang.org/x/sys v0.35.0 // indirect
 	golang.org/x/text v0.28.0 // indirect
@@ -75,9 +76,9 @@ require (
 	google.golang.org/protobuf v1.36.5 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
-	k8s.io/utils v0.0.0-20241104100929-3ea5e8cea738 // indirect
-	sigs.k8s.io/json v0.0.0-20241010143419-9aa6b5e7a4b3 // indirect
-	sigs.k8s.io/yaml v1.4.0 // indirect
+	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397 // indirect
+	sigs.k8s.io/json v0.0.0-20241014173422-cfa47c3a1cc8 // indirect
+	sigs.k8s.io/yaml v1.6.0 // indirect
 )
 
 // TODO(fatedier): Temporary use the modified version, update to the official version after merging into the official repository.
