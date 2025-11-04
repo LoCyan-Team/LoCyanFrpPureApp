@@ -16,7 +16,7 @@ require (
 	github.com/pion/stun/v2 v2.0.0
 	github.com/pires/go-proxyproto v0.8.1
 	github.com/prometheus/client_golang v1.22.0
-	github.com/quic-go/quic-go v0.52.0
+	github.com/quic-go/quic-go v0.55.0
 	github.com/rodaine/table v1.3.0
 	github.com/samber/lo v1.47.0
 	github.com/songgao/water v0.0.0-20200317203138-2b4b6d7c09d8
@@ -66,7 +66,6 @@ require (
 	github.com/tidwall/pretty v1.2.1 // indirect
 	github.com/tjfoc/gmsm v1.4.1 // indirect
 	github.com/vishvananda/netns v0.0.5 // indirect
-	go.uber.org/mock v0.5.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/mod v0.27.0 // indirect
