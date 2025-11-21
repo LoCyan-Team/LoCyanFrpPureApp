@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/api/server/user"
+	"github.com/fatedier/frp/pkg/database"
 	"io"
 	"net"
 	"net/http"
@@ -571,12 +572,35 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 	// If client's RunID is empty, it's a new client, we just create a new controller.
 	// Otherwise, we check if there is one controller has the same run id. If so, we release previous controller and start new one.
 	var err error
+	// 判断
+	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
+	if err != nil {
+		log.Infof(err.Error())
+	}
+	defer func() {
+		if closeErr := manager.Close(); closeErr != nil {
+			log.Errorf("Failed to close database manager: %v", closeErr)
+			// 如果主错误为 nil，则返回关闭错误；否则保留主错误
+			if err == nil {
+				err = closeErr
+			}
+		}
+	}()
+
 	if loginMsg.RunID == "" {
 		generated, err := util.RandID()
 		if err != nil {
 			return err
 		}
 		loginMsg.RunID = fmt.Sprintf("%d.%s", svr.cfg.NodeId, generated)
+	} else {
+		isClosed, err := manager.IsClosedByRunID(loginMsg.RunID)
+		if err != nil {
+			return err
+		}
+		if isClosed {
+			return errors.New("proxy is closed: " + loginMsg.RunID)
+		}
 	}
 
 	ctx := netpkg.NewContextFromConn(ctlConn)

@@ -24,11 +24,10 @@ type Custom struct {
 var version = "0.62.1"
 var custom = Custom{
 	Build: "1",
-	Mod:   "LoCyanFrp",
 }
 
 func Full() string {
-	return fmt.Sprintf("%s-%sb%s", Mod(), Version(), Build())
+	return fmt.Sprintf("%sb%s", Version(), Build())
 }
 
 func Version() string {

@@ -17,8 +17,11 @@ package server
 import (
 	"cmp"
 	"encoding/json"
+	"github.com/fatedier/frp/pkg/database"
+	"github.com/fatedier/frp/pkg/msg"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -54,6 +57,9 @@ func (svr *Service) registerRouteHandlers(helper *httppkg.RouterRegisterHelper) 
 	subRouter.HandleFunc("/api/proxy/{type}/{name}", svr.apiProxyByTypeAndName).Methods("GET")
 	subRouter.HandleFunc("/api/traffic/{name}", svr.apiProxyTraffic).Methods("GET")
 	subRouter.HandleFunc("/api/proxies", svr.deleteProxies).Methods("DELETE")
+	subRouter.HandleFunc("/api/proxies/close/list", svr.ShowClosedProxy).Methods("GET")
+	subRouter.HandleFunc("/api/proxies/close/{runId}", svr.CloseProxy).Methods("GET")
+	subRouter.HandleFunc("/api/proxies/delete/{proxy_name}", svr.DeleteProxyFromDatabase).Methods("GET")
 
 	// view
 	subRouter.Handle("/favicon.ico", http.FileServer(helper.AssetsFS)).Methods("GET")
@@ -345,7 +351,7 @@ func (svr *Service) getProxyStatsByTypeAndName(proxyType string, proxyName strin
 	return
 }
 
-// /api/traffic/:name
+// GetProxyTrafficResp /api/traffic/:name
 type GetProxyTrafficResp struct {
 	Name       string  `json:"name"`
 	TrafficIn  []int64 `json:"trafficIn"`
@@ -403,4 +409,182 @@ func (svr *Service) deleteProxies(w http.ResponseWriter, r *http.Request) {
 	}
 	cleared, total := mem.StatsCollector.ClearOfflineProxies()
 	log.Infof("cleared [%d] offline proxies, total [%d] proxies", cleared, total)
+}
+
+// CloseProxy GET /api/proxies/close/{runId}
+func (svr *Service) CloseProxy(w http.ResponseWriter, r *http.Request) {
+
+	// CloseProxy 数据库维护
+	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
+	if err != nil {
+		log.Infof(err.Error())
+	}
+	defer manager.Close()
+
+	res := GeneralResponse{Code: 200}
+	log.Debugf("http request: [%s]", r.URL.Path)
+
+	defer func() {
+		log.Infof("http response [%s]: code [%d]", r.URL.Path, res.Code)
+		w.WriteHeader(res.Code)
+		if len(res.Msg) > 0 {
+			_, _ = w.Write([]byte(res.Msg))
+		}
+	}()
+
+	params := mux.Vars(r)
+	runId := params["runId"]
+	if runId == "" {
+		res.Code = 400
+		res.Msg = "Please provide a valid run id"
+		return
+	}
+	user_type := r.URL.Query().Get("type")
+	if user_type == "" {
+		res.Code = 400
+		res.Msg = "Please provide a user type"
+		return
+	} else if user_type != "admin" && user_type != "user" {
+		res.Code = 400
+		res.Msg = "Please provide a vaild user type"
+	}
+
+	// 这里仅能判断 runId
+	isClosed, err := manager.IsClosed(runId, "")
+	if err != nil {
+		res.Code = 400
+		res.Msg = "Can't search runId in database: " + err.Error()
+		return
+	}
+	if isClosed {
+		res.Code = 200
+		res.Msg = "Already closed"
+		return
+	}
+
+	// Get Proxy Control
+	ctl, err2 := svr.ctlManager.GetByID(runId)
+	if !err2 {
+		res.Code = 400
+		res.Msg = "Can‘t find proxy"
+		return
+	}
+
+	// 非官方客户端需要加黑，若 tag 为 admin 则加黑, user 则不加黑允许重连
+	if user_type == "admin" {
+		for _, pxy := range ctl.proxies {
+			err := manager.AddClosedProxy(runId, pxy.GetName())
+			if err != nil {
+				res.Code = 400
+				res.Msg = "Can’t add closed proxy to database: " + err.Error()
+				return
+			}
+		}
+	}
+
+	// 判断是否为官方客户端, 如果为官方客户端可以让客户端强制关闭
+	// 官方客户端因为不会自动重连，所以不执行加黑操作
+	if strings.Contains(ctl.loginMsg.Version, "LoCyanFrp") {
+		CloseInfo := &msg.CloseClient{RunId: runId}
+		if err := ctl.msgDispatcher.Send(CloseInfo); err != nil {
+			res.Code = 400
+			res.Msg = "Can’t closed proxy: " + err.Error()
+			return
+		}
+	} else {
+		err3 := ctl.Close()
+		if err3 != nil {
+			res.Code = 400
+			res.Msg = "Can’t close proxy: " + err3.Error()
+			return
+		}
+	}
+
+	res.Code = 200
+	res.Msg = "OK"
+	return
+}
+
+// DeleteProxyFromDatabase GET /api/proxies/delete/{runId}
+func (svr *Service) DeleteProxyFromDatabase(w http.ResponseWriter, r *http.Request) {
+
+	// CloseProxy 数据库维护
+	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
+	if err != nil {
+		log.Infof(err.Error())
+	}
+	defer manager.Close()
+
+	res := GeneralResponse{Code: 200}
+	log.Debugf("http request: [%s]", r.URL.Path)
+
+	defer func() {
+		log.Infof("http response [%s]: code [%d]", r.URL.Path, res.Code)
+		w.WriteHeader(res.Code)
+		if len(res.Msg) > 0 {
+			_, _ = w.Write([]byte(res.Msg))
+		}
+	}()
+
+	params := mux.Vars(r)
+	proxyName := params["proxy_name"]
+	if proxyName == "" {
+		res.Code = 400
+		res.Msg = "Please provide a valid run id"
+		return
+	}
+
+	count, err := manager.DeleteByProxyName(proxyName)
+	if count < 1 {
+		res.Code = 400
+		res.Msg = "Can't find proxy"
+		return
+	}
+	if err != nil {
+		res.Code = 500
+		res.Msg = "Can't delete proxy: " + err.Error()
+		return
+	}
+
+	res.Code = 200
+	res.Msg = "OK"
+	return
+}
+
+func (svr *Service) ShowClosedProxy(w http.ResponseWriter, r *http.Request) {
+	res := GeneralResponse{Code: 200}
+
+	log.Infof("http request: [%s]", r.URL.Path)
+	defer func() {
+		log.Infof("http response [%s]: code [%d]", r.URL.Path, res.Code)
+		w.WriteHeader(res.Code)
+		if len(res.Msg) > 0 {
+			_, _ = w.Write([]byte(res.Msg))
+		}
+	}()
+
+	// CloseProxy 数据库维护
+	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
+	if err != nil {
+		log.Infof(err.Error())
+	}
+	defer manager.Close()
+
+	proxiesm, err := manager.GetAllClosedProxies()
+	if err != nil {
+		res.Code = 500
+		res.Msg = "Can't get proxies: " + err.Error()
+		return
+	}
+
+	jsonData, err := json.Marshal(proxiesm)
+	if err != nil {
+		res.Code = 500
+		res.Msg = "Can't get proxies: " + err.Error()
+		return
+	}
+
+	res.Code = 200
+	res.Msg = string(jsonData)
+	return
 }
