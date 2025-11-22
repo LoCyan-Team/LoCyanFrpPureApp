@@ -21,7 +21,7 @@ type Custom struct {
 	Mod   string
 }
 
-var version = "0.62.1"
+var version = "LoCyanFrp-0.62.1"
 var custom = Custom{
 	Build: "1",
 }
