@@ -2,7 +2,6 @@
 package database
 
 import (
-	"context"
 	"github.com/glebarez/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
@@ -172,7 +171,7 @@ func (m *ClosedProxyManager) GetClosedProxiesPaginated(page, pageSize int) ([]Cl
 }
 
 // GetStats 获取统计信息
-func (m *ClosedProxyManager) GetStats(ctx context.Context) (map[ClosedProxyType]int64, int64, error) {
+func (m *ClosedProxyManager) GetStats() (map[ClosedProxyType]int64, int64, error) {
 	stats := make(map[ClosedProxyType]int64)
 	var total int64
 
