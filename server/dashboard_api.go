@@ -446,7 +446,7 @@ func (svr *Service) CloseProxy(w http.ResponseWriter, r *http.Request) {
 		return
 	} else if userType != "admin" && userType != "user" {
 		res.Code = 400
-		res.Msg = "Please provide a vaild user type"
+		res.Msg = "Please provide a valid user type"
 	}
 
 	// 这里仅能判断 runId
@@ -580,14 +580,14 @@ func (svr *Service) ShowClosedProxy(w http.ResponseWriter, r *http.Request) {
 	}
 	defer manager.Close()
 
-	proxiesm, err := manager.GetAllClosedProxies()
+	proxies, err := manager.GetAllClosedProxies()
 	if err != nil {
 		res.Code = 500
 		res.Msg = "Can't get proxies: " + err.Error()
 		return
 	}
 
-	jsonData, err := json.Marshal(proxiesm)
+	jsonData, err := json.Marshal(proxies)
 	if err != nil {
 		res.Code = 500
 		res.Msg = "Can't get proxies: " + err.Error()
@@ -635,7 +635,7 @@ func (svr *Service) AddProxyFromDatabase(w http.ResponseWriter, r *http.Request)
 		return
 	} else if userType != "admin" && userType != "user" {
 		res.Code = 400
-		res.Msg = "Please provide a vaild user type"
+		res.Msg = "Please provide a valid user type"
 	}
 
 	// 先在本地检索是否存在 runId，若不存在则置空
