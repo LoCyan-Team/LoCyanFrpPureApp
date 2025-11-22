@@ -638,10 +638,20 @@ func (svr *Service) AddProxyFromDatabase(w http.ResponseWriter, r *http.Request)
 		res.Msg = "Please provide a vaild user type"
 	}
 
-	if err := manager.AddClosedProxyWithType("", proxyName, database.ClosedProxyType(userType)); err != nil {
-		res.Code = 400
-		res.Msg = "Can't add proxy to blacklist: " + err.Error()
-		return
+	// 先在本地检索是否存在 runId，若不存在则置空
+	if pxy, ok := svr.pxyManager.GetByName(proxyName); !ok {
+		if err := manager.AddClosedProxyWithType("", proxyName, database.ClosedProxyType(userType)); err != nil {
+			res.Code = 400
+			res.Msg = "Can't add proxy to blacklist: " + err.Error()
+			return
+		}
+	} else {
+		runId := pxy.GetLoginMsg().RunID
+		if err := manager.AddClosedProxyWithType(runId, proxyName, database.ClosedProxyType(userType)); err != nil {
+			res.Code = 400
+			res.Msg = "Can't add proxy to blacklist: " + err.Error()
+			return
+		}
 	}
 
 	res.Code = 200
