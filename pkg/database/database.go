@@ -13,7 +13,7 @@ type ClosedProxyType string
 
 const (
 	ClosedTypeUser  ClosedProxyType = "user"  // 手动关闭
-	ClosedTypeAdmin ClosedProxyType = "admin" // 自动关闭
+	ClosedTypeAdmin ClosedProxyType = "admin" // 管理关闭
 )
 
 type ClosedProxy struct {
