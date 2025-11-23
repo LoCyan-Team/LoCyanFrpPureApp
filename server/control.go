@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/api/server/tunnel"
+	"github.com/fatedier/frp/pkg/database"
 	"net"
 	"runtime/debug"
 	"strings"
@@ -490,6 +491,29 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 	pxyConf, err = config.NewProxyConfigurerFromMsg(pxyMsg, ctl.serverCfg)
 	if err != nil {
 		return
+	}
+
+	// 判断
+	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
+	if err != nil {
+		xl.Infof(err.Error())
+	}
+	defer func() {
+		if closeErr := manager.Close(); closeErr != nil {
+			xl.Errorf("Failed to close database manager: %v", closeErr)
+			// 如果主错误为 nil，则返回关闭错误；否则保留主错误
+			if err == nil {
+				err = closeErr
+			}
+		}
+	}()
+
+	isClosed, err := manager.IsClosedByProxyName(pxyMsg.ProxyName)
+	if err != nil {
+		return
+	}
+	if isClosed {
+		return "", errors.New("proxy is already closed by admin")
 	}
 
 	if ctl.serverCfg.EnableApi {

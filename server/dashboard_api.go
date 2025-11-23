@@ -17,8 +17,11 @@ package server
 import (
 	"cmp"
 	"encoding/json"
+	"github.com/fatedier/frp/pkg/database"
+	"github.com/fatedier/frp/pkg/msg"
 	"net/http"
 	"slices"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -54,7 +57,10 @@ func (svr *Service) registerRouteHandlers(helper *httppkg.RouterRegisterHelper) 
 	subRouter.HandleFunc("/api/proxy/{type}/{name}", svr.apiProxyByTypeAndName).Methods("GET")
 	subRouter.HandleFunc("/api/traffic/{name}", svr.apiProxyTraffic).Methods("GET")
 	subRouter.HandleFunc("/api/proxies", svr.deleteProxies).Methods("DELETE")
-
+	subRouter.HandleFunc("/api/proxies/close/{runId}", svr.CloseProxy).Methods("GET")
+	subRouter.HandleFunc("/api/blacklist/list", svr.ShowClosedProxy).Methods("GET")
+	subRouter.HandleFunc("/api/blacklist/add/{proxy_name}", svr.AddProxyFromDatabase).Methods("GET")
+	subRouter.HandleFunc("/api/blacklist/delete/{proxy_name}", svr.DeleteProxyFromDatabase).Methods("GET")
 	// view
 	subRouter.Handle("/favicon.ico", http.FileServer(helper.AssetsFS)).Methods("GET")
 	subRouter.PathPrefix("/static/").Handler(
@@ -194,7 +200,7 @@ func getConfByType(proxyType string) any {
 	}
 }
 
-// Get proxy info.
+// ProxyStatsInfo Get proxy info.
 type ProxyStatsInfo struct {
 	Name            string `json:"name"`
 	Conf            any    `json:"conf"`
@@ -270,7 +276,7 @@ func (svr *Service) getProxyStatsByType(proxyType string) (proxyInfos []*ProxySt
 	return
 }
 
-// Get proxy info by name.
+// GetProxyStatsResp Get proxy info by name.
 type GetProxyStatsResp struct {
 	Name            string `json:"name"`
 	Conf            any    `json:"conf"`
@@ -345,7 +351,7 @@ func (svr *Service) getProxyStatsByTypeAndName(proxyType string, proxyName strin
 	return
 }
 
-// /api/traffic/:name
+// GetProxyTrafficResp /api/traffic/:name
 type GetProxyTrafficResp struct {
 	Name       string  `json:"name"`
 	TrafficIn  []int64 `json:"trafficIn"`
@@ -403,4 +409,252 @@ func (svr *Service) deleteProxies(w http.ResponseWriter, r *http.Request) {
 	}
 	cleared, total := mem.StatsCollector.ClearOfflineProxies()
 	log.Infof("cleared [%d] offline proxies, total [%d] proxies", cleared, total)
+}
+
+// CloseProxy GET /api/proxies/close/{runId}
+func (svr *Service) CloseProxy(w http.ResponseWriter, r *http.Request) {
+
+	// CloseProxy 数据库维护
+	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
+	if err != nil {
+		log.Infof(err.Error())
+	}
+	defer manager.Close()
+
+	res := GeneralResponse{Code: 200}
+	log.Debugf("http request: [%s]", r.URL.Path)
+
+	defer func() {
+		log.Infof("http response [%s]: code [%d]", r.URL.Path, res.Code)
+		w.WriteHeader(res.Code)
+		if len(res.Msg) > 0 {
+			_, _ = w.Write([]byte(res.Msg))
+		}
+	}()
+
+	params := mux.Vars(r)
+	runId := params["runId"]
+	if runId == "" {
+		res.Code = 400
+		res.Msg = "Please provide a valid run id"
+		return
+	}
+	userType := r.URL.Query().Get("type")
+	if userType == "" {
+		res.Code = 400
+		res.Msg = "Please provide a user type"
+		return
+	} else if userType != "admin" && userType != "user" {
+		res.Code = 400
+		res.Msg = "Please provide a valid user type"
+	}
+
+	// 这里仅能判断 runId
+	isClosed, err := manager.IsClosed(runId, "")
+	if err != nil {
+		res.Code = 400
+		res.Msg = "Can't search runId in database: " + err.Error()
+		return
+	}
+	if isClosed {
+		res.Code = 200
+		res.Msg = "Already closed"
+		return
+	}
+
+	// Get Proxy Control
+	ctl, ok := svr.ctlManager.GetByID(runId)
+	if !ok {
+		// 无法通过 runId 查找就按照proxy name查找
+		if pxy, ok := svr.pxyManager.GetByName(runId); ok {
+			ctl, ok = svr.ctlManager.GetByID(pxy.GetLoginMsg().RunID)
+			if !ok {
+				res.Code = 400
+				res.Msg = "Can't find proxy by proxy name: " + runId
+				return
+			}
+		} else {
+			res.Code = 400
+			res.Msg = "Can't find proxy by proxy name: " + runId
+			return
+		}
+	}
+
+	// 非官方客户端需要加黑，若 tag 为 admin 则加黑, user 则不加黑允许重连
+	if userType == "admin" {
+		for _, pxy := range ctl.proxies {
+			err := manager.AddClosedProxy(runId, pxy.GetName())
+			if err != nil {
+				res.Code = 400
+				res.Msg = "Can’t add closed proxy to database: " + err.Error()
+				return
+			}
+		}
+	}
+
+	// 判断是否为官方客户端, 如果为官方客户端可以让客户端强制关闭
+	// 官方客户端因为不会自动重连，所以不执行加黑操作
+	if strings.Contains(ctl.loginMsg.Version, "LoCyanFrp") {
+		CloseInfo := &msg.CloseClient{RunId: runId}
+		if err := ctl.msgDispatcher.Send(CloseInfo); err != nil {
+			res.Code = 400
+			res.Msg = "Can’t closed proxy: " + err.Error()
+			return
+		}
+	} else {
+		err3 := ctl.Close()
+		if err3 != nil {
+			res.Code = 400
+			res.Msg = "Can’t close proxy: " + err3.Error()
+			return
+		}
+	}
+
+	res.Code = 200
+	res.Msg = "OK"
+	return
+}
+
+// DeleteProxyFromDatabase GET /api/proxies/delete/{runId}
+func (svr *Service) DeleteProxyFromDatabase(w http.ResponseWriter, r *http.Request) {
+
+	// CloseProxy 数据库维护
+	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
+	if err != nil {
+		log.Infof(err.Error())
+	}
+	defer manager.Close()
+
+	res := GeneralResponse{Code: 200}
+	log.Debugf("http request: [%s]", r.URL.Path)
+
+	defer func() {
+		log.Infof("http response [%s]: code [%d]", r.URL.Path, res.Code)
+		w.WriteHeader(res.Code)
+		if len(res.Msg) > 0 {
+			_, _ = w.Write([]byte(res.Msg))
+		}
+	}()
+
+	params := mux.Vars(r)
+	proxyName := params["proxy_name"]
+	if proxyName == "" {
+		res.Code = 400
+		res.Msg = "Please provide a valid proxy name"
+		return
+	}
+
+	count, err := manager.DeleteByProxyName(proxyName)
+	if count < 1 {
+		res.Code = 400
+		res.Msg = "Can't find proxy"
+		return
+	}
+	if err != nil {
+		res.Code = 500
+		res.Msg = "Can't delete proxy: " + err.Error()
+		return
+	}
+
+	res.Code = 200
+	res.Msg = "OK"
+	return
+}
+
+func (svr *Service) ShowClosedProxy(w http.ResponseWriter, r *http.Request) {
+	res := GeneralResponse{Code: 200}
+
+	log.Infof("http request: [%s]", r.URL.Path)
+	defer func() {
+		log.Infof("http response [%s]: code [%d]", r.URL.Path, res.Code)
+		w.WriteHeader(res.Code)
+		if len(res.Msg) > 0 {
+			_, _ = w.Write([]byte(res.Msg))
+		}
+	}()
+
+	// CloseProxy 数据库维护
+	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
+	if err != nil {
+		log.Infof(err.Error())
+	}
+	defer manager.Close()
+
+	proxies, err := manager.GetAllClosedProxies()
+	if err != nil {
+		res.Code = 500
+		res.Msg = "Can't get proxies: " + err.Error()
+		return
+	}
+
+	jsonData, err := json.Marshal(proxies)
+	if err != nil {
+		res.Code = 500
+		res.Msg = "Can't get proxies: " + err.Error()
+		return
+	}
+
+	res.Code = 200
+	res.Msg = string(jsonData)
+	return
+}
+
+// AddProxyFromDatabase GET /api/proxies/delete/{runId}
+func (svr *Service) AddProxyFromDatabase(w http.ResponseWriter, r *http.Request) {
+
+	// CloseProxy 数据库维护
+	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
+	if err != nil {
+		log.Infof(err.Error())
+	}
+	defer manager.Close()
+
+	res := GeneralResponse{Code: 200}
+	log.Debugf("http request: [%s]", r.URL.Path)
+
+	defer func() {
+		log.Infof("http response [%s]: code [%d]", r.URL.Path, res.Code)
+		w.WriteHeader(res.Code)
+		if len(res.Msg) > 0 {
+			_, _ = w.Write([]byte(res.Msg))
+		}
+	}()
+
+	// 必要参数
+	params := mux.Vars(r)
+	proxyName := params["proxy_name"]
+	if proxyName == "" {
+		res.Code = 400
+		res.Msg = "Please provide a valid proxy name"
+		return
+	}
+	userType := r.URL.Query().Get("type")
+	if userType == "" {
+		res.Code = 400
+		res.Msg = "Please provide a user type"
+		return
+	} else if userType != "admin" && userType != "user" {
+		res.Code = 400
+		res.Msg = "Please provide a valid user type"
+	}
+
+	// 先在本地检索是否存在 runId，若不存在则置空
+	if pxy, ok := svr.pxyManager.GetByName(proxyName); !ok {
+		if err := manager.AddClosedProxyWithType("", proxyName, database.ClosedProxyType(userType)); err != nil {
+			res.Code = 400
+			res.Msg = "Can't add proxy to blacklist: " + err.Error()
+			return
+		}
+	} else {
+		runId := pxy.GetLoginMsg().RunID
+		if err := manager.AddClosedProxyWithType(runId, proxyName, database.ClosedProxyType(userType)); err != nil {
+			res.Code = 400
+			res.Msg = "Can't add proxy to blacklist: " + err.Error()
+			return
+		}
+	}
+
+	res.Code = 200
+	res.Msg = "OK"
+	return
 }

@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/fatedier/golib/crypto"
-	quic "github.com/quic-go/quic-go"
+	"github.com/quic-go/quic-go"
 
 	"github.com/fatedier/frp/pkg/util/xlog"
 )
@@ -132,13 +132,13 @@ func (conn *WrapReadWriteCloserConn) SetWriteDeadline(t time.Time) error {
 type CloseNotifyConn struct {
 	net.Conn
 
-	// 1 means closed
+	// 1 mean closed
 	closeFlag int32
 
 	closeFn func()
 }
 
-// closeFn will be only called once
+// WrapCloseNotifyConn closeFn will be only called once
 func WrapCloseNotifyConn(c net.Conn, closeFn func()) net.Conn {
 	return &CloseNotifyConn{
 		Conn:    c,
@@ -160,7 +160,7 @@ func (cc *CloseNotifyConn) Close() (err error) {
 type StatsConn struct {
 	net.Conn
 
-	closed     int64 // 1 means closed
+	closed     int64 // 1 mean closed
 	totalRead  int64
 	totalWrite int64
 	statsFunc  func(totalRead, totalWrite int64)
@@ -197,11 +197,11 @@ func (statsConn *StatsConn) Close() (err error) {
 }
 
 type wrapQuicStream struct {
-	quic.Stream
-	c quic.Connection
+	*quic.Stream
+	c *quic.Conn
 }
 
-func QuicStreamToNetConn(s quic.Stream, c quic.Connection) net.Conn {
+func QuicStreamToNetConn(s *quic.Stream, c *quic.Conn) net.Conn {
 	return &wrapQuicStream{
 		Stream: s,
 		c:      c,

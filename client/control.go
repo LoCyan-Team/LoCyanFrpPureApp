@@ -17,6 +17,7 @@ package client
 import (
 	"context"
 	"net"
+	"os"
 	"sync/atomic"
 	"time"
 
@@ -197,6 +198,18 @@ func (ctl *Control) handlePong(m msg.Message) {
 	xl.Debugf("receive heartbeat from server")
 }
 
+func (ctl *Control) handleCloseClient(m msg.Message) {
+	xl := ctl.xl
+	inMsg := m.(*msg.CloseClient)
+
+	if inMsg.RunId == "" {
+		xl.Errorf("Can't close client with run id: %s", inMsg.RunId)
+		return
+	}
+	xl.Infof("Your client has been forcibly taken offline by the server")
+	os.Exit(0)
+}
+
 // closeSession closes the control connection.
 func (ctl *Control) closeSession() {
 	ctl.sessionCtx.Conn.Close()
@@ -232,6 +245,7 @@ func (ctl *Control) registerMsgHandlers() {
 	ctl.msgDispatcher.RegisterHandler(&msg.NewProxyResp{}, ctl.handleNewProxyResp)
 	ctl.msgDispatcher.RegisterHandler(&msg.NatHoleResp{}, ctl.handleNatHoleResp)
 	ctl.msgDispatcher.RegisterHandler(&msg.Pong{}, ctl.handlePong)
+	ctl.msgDispatcher.RegisterHandler(&msg.CloseClient{}, msg.AsyncHandler(ctl.handleCloseClient))
 }
 
 // heartbeatWorker sends heartbeat to server and check heartbeat timeout.

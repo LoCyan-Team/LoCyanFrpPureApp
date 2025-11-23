@@ -38,6 +38,7 @@ const (
 	TypeNatHoleResp        = 'm'
 	TypeNatHoleSid         = '5'
 	TypeNatHoleReport      = '6'
+	TypeCloseClient        = 'a'
 )
 
 var msgTypeMap = map[byte]any{
@@ -59,6 +60,7 @@ var msgTypeMap = map[byte]any{
 	TypeNatHoleResp:        NatHoleResp{},
 	TypeNatHoleSid:         NatHoleSid{},
 	TypeNatHoleReport:      NatHoleReport{},
+	TypeCloseClient:        CloseClient{},
 }
 
 var TypeNameNatHoleResp = reflect.TypeOf(&NatHoleResp{}).Elem().Name()
@@ -243,4 +245,8 @@ type NatHoleSid struct {
 type NatHoleReport struct {
 	Sid     string `json:"sid,omitempty"`
 	Success bool   `json:"success,omitempty"`
+}
+
+type CloseClient struct {
+	RunId string `json:"runId,omitempty"`
 }
