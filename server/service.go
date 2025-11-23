@@ -23,6 +23,7 @@ import (
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/api/server/user"
 	"github.com/fatedier/frp/pkg/database"
+	"github.com/quic-go/quic-go"
 	"io"
 	"net"
 	"net/http"
@@ -33,7 +34,6 @@ import (
 	"github.com/fatedier/golib/crypto"
 	"github.com/fatedier/golib/net/mux"
 	fmux "github.com/hashicorp/yamux"
-	quic "github.com/quic-go/quic-go"
 	"github.com/samber/lo"
 
 	"github.com/fatedier/frp/pkg/auth"
