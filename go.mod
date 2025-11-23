@@ -97,3 +97,6 @@ require (
 
 // TODO(fatedier): Temporary use the modified version, update to the official version after merging into the official repository.
 replace github.com/hashicorp/yamux => github.com/fatedier/yamux v0.0.0-20230628132301-7aca4898904d
+
+// Replace anet with custom version
+replace github.com/wlynxg/anet => github.com/BieHDC/anet v0.0.6-0.20241226223613-d47f8b766b3c
