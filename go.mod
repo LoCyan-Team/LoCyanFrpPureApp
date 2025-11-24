@@ -9,7 +9,7 @@ require (
 	github.com/glebarez/sqlite v1.11.0
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/mux v1.8.1
-	github.com/gorilla/websocket v1.5.3
+	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/hashicorp/yamux v0.1.2
 	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
@@ -36,7 +36,7 @@ require (
 	gopkg.in/ini.v1 v1.67.0
 	gorm.io/gorm v1.31.1
 	k8s.io/apimachinery v0.34.2
-	k8s.io/client-go v0.28.15
+	k8s.io/client-go v0.34.2
 )
 
 require (
