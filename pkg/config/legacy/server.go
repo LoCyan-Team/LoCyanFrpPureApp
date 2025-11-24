@@ -198,6 +198,11 @@ type ServerCommonConf struct {
 	PprofEnable bool `ini:"pprof_enable" json:"pprof_enable"`
 	// NatHoleAnalysisDataReserveHours specifies the hours to reserve nat hole analysis data.
 	NatHoleAnalysisDataReserveHours int64 `ini:"nat_hole_analysis_data_reserve_hours" json:"nat_hole_analysis_data_reserve_hours"`
+
+	// 老配置
+	EnableApi  bool   `ini:"api_enable" json:"api_enable"`
+	NodeId     int64  `ini:"node_id" json:"node_id"`
+	NodeApiKey string `ini:"api_token" json:"api_token"`
 }
 
 // GetDefaultServerConf returns a server configuration with reasonable defaults.
