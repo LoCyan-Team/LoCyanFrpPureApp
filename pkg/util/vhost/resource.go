@@ -41,7 +41,7 @@ const (
 	    <h1>无法找到您所请求的网站</h1>
         <p>我们无法找到您所请求的网站，请确认 Frp 客户端已正常启动。</p>
         <p>We can not find your website, please confirm that Frp client started.</p>
-        <p class="powered-by">Powered by <a target="_blank" href="https://www.locyanfrp.cn/?utm_source=locyanfrp&utm_context=frps&utm_medium=external_link">LoCyanFrp</a></p>
+        <p class="powered-by">Powered by <a target="_blank" href="https://www.locyanfrp.cn/?utm_source=locyanfrp&utm_content=frps&utm_medium=external_link">LoCyanFrp</a></p>
 	</div>
 </body>
 <style>
