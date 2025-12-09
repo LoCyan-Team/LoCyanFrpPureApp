@@ -2,75 +2,89 @@ export PATH := $(PATH):`go env GOPATH`/bin
 export GO111MODULE=on
 LDFLAGS := -s -w
 
-# --- 核心平台列表 ---
-os-archs=darwin:amd64 darwin:arm64 freebsd:amd64 linux:amd64 linux:arm:7 linux:arm:5 linux:arm64 windows:amd64 windows:arm64 linux:mips64 linux:mips64le linux:mips:softfloat linux:mipsle:softfloat linux:riscv64 linux:loong64
+# -------------------------------------------------------------------------
+# 1. 定义平台列表 (先定义值，再组合)
+# -------------------------------------------------------------------------
 
-# --- 只构建 frpc 的平台列表 (frps 将被跳过) ---
-frpc-only-os-archs=android:amd64 android:arm android:arm64 android:386
+# 普通构建列表 (frpc + frps, CGO_ENABLED=0)
+OS_ARCHS := darwin:amd64 darwin:arm64 freebsd:amd64 \
+	linux:amd64 linux:arm:7 linux:arm:5 linux:arm64 \
+	windows:amd64 windows:arm64 \
+	linux:mips64 linux:mips64le linux:mips:softfloat linux:mipsle:softfloat \
+	linux:riscv64 linux:loong64
 
-# --- 需要 CGO_ENABLED=1 和 -buildmode=c-shared 的平台列表 ---
-cgo-enabled-archs=android:amd64 android:arm android:arm64 android:386
+# 只构建 frpc 的列表
+FRPC_ONLY_ARCHS := android:amd64 android:arm android:arm64 android:386
 
-# 组合所有需要构建的平台
-ALL_ARCHS=$(shell echo $(os-archs) $(frpc-only-os-archs) $(cgo-enabled-archs) | tr ' ' '\n' | sort -u)
+# 需要 CGO_ENABLED=1 和 -buildmode=c-shared 的列表
+# 注意：通常 Android 构建库文件需要开启 CGO 和 c-shared
+CGO_ENABLED_ARCHS := android:amd64 android:arm android:arm64 android:386
 
-FRPC_ONLY_LIST=$(subst $(space),|,$(frpc-only-os-archs))
-CGO_ENABLED_LIST=$(subst $(space),|,$(cgo-enabled-archs))
+# 组合所有需要构建的平台 (去重并排序)
+ALL_ARCHS := $(shell echo $(OS_ARCHS) $(FRPC_ONLY_ARCHS) $(CGO_ENABLED_ARCHS) | tr ' ' '\n' | sort -u)
+
+# -------------------------------------------------------------------------
+# 2. 构建目标
+# -------------------------------------------------------------------------
 
 all: build
 
 build: app
 
 app:
+	@mkdir -p ./release
 	@$(foreach n, $(ALL_ARCHS), \
-		os=$(shell echo "$(n)" | cut -d : -f 1); \
-		arch=$(shell echo "$(n)" | cut -d : -f 2); \
-		extra=$(shell echo "$(n)" | cut -d : -f 3); \
-		flags=''; \
-		target_suffix=$${os}_$${arch}; \
-		is_frpc_only=0; \
-		cgo_enabled=0; \
-		build_mode=''; \
+		$(eval os := $(shell echo "$(n)" | cut -d : -f 1)) \
+		$(eval arch := $(shell echo "$(n)" | cut -d : -f 2)) \
+		$(eval extra := $(shell echo "$(n)" | cut -d : -f 3)) \
 		\
-		if [ "$${os}" = "linux" ] && [ "$${arch}" = "arm" ] && [ "$${extra}" != "" ] ; then \
-			if [ "$${extra}" = "7" ]; then \
-				flags=GOARM=7; \
-				target_suffix=$${os}_arm_hf; \
-			elif [ "$${extra}" = "5" ]; then \
-				flags=GOARM=5; \
-				target_suffix=$${os}_arm; \
-			fi; \
-		elif [ "$${os}" = "linux" ] && ([ "$${arch}" = "mips" ] || [ "$${arch}" = "mipsle" ]) && [ "$${extra}" != "" ] ; then \
-		    flags=GOMIPS=$${extra}; \
+		$(eval IS_FRPC_ONLY := $(if $(filter $(n),$(FRPC_ONLY_ARCHS)),1,0)) \
+		$(eval USE_CGO := $(if $(filter $(n),$(CGO_ENABLED_ARCHS)),1,0)) \
+		\
+		# --- 动态计算文件名后缀和前缀 --- \
+		$(eval SUFFIX := $(os)_$(arch)) \
+		$(eval FILE_EXT := ) \
+		$(eval FILE_PREFIX := ) \
+		$(eval BUILD_MODE := ) \
+		\
+		$(if $(filter windows,$(os)), $(eval FILE_EXT := .exe)) \
+		$(if $(filter android,$(os)), \
+			$(eval FILE_PREFIX := lib) \
+			$(eval FILE_EXT := .so) \
+			$(if $(filter 1,$(USE_CGO)), $(eval BUILD_MODE := -buildmode=c-shared)) \
+		) \
+		\
+		# --- 处理 Linux ARM/MIPS 特殊后缀 --- \
+		$(if $(filter linux,$(os)), \
+			$(if $(filter arm,$(arch)), \
+				$(if $(filter 7,$(extra)), $(eval SUFFIX := $(os)_arm_hf)) \
+				$(if $(filter 5,$(extra)), $(eval SUFFIX := $(os)_arm)) \
+			) \
+		) \
+		\
+		echo "Build $(n) -> [CGO=$(USE_CGO), Mode=$(if $(BUILD_MODE),$(BUILD_MODE),default), FrpcOnly=$(IS_FRPC_ONLY)]"; \
+		\
+		# --- 设置环境变量并执行构建 --- \
+		env CGO_ENABLED=$(USE_CGO) GOOS=$(os) GOARCH=$(arch) \
+			$(if $(filter linux,$(os)), \
+				$(if $(filter arm,$(arch)),$(if $(filter 7,$(extra)),GOARM=7)) \
+				$(if $(filter arm,$(arch)),$(if $(filter 5,$(extra)),GOARM=5)) \
+				$(if $(filter mips,$(arch)),$(if $(extra),GOMIPS=$(extra))) \
+				$(if $(filter mipsle,$(arch)),$(if $(extra),GOMIPS=$(extra))) \
+			) \
+		go build $(BUILD_MODE) -trimpath -ldflags "$(LDFLAGS)" -tags frpc \
+			-o ./release/$(FILE_PREFIX)frpc_$(SUFFIX)$(FILE_EXT) ./cmd/frpc || exit 1; \
+		\
+		if [ "$(IS_FRPC_ONLY)" = "0" ]; then \
+			env CGO_ENABLED=0 GOOS=$(os) GOARCH=$(arch) \
+				$(if $(filter linux,$(os)), \
+					$(if $(filter arm,$(arch)),$(if $(filter 7,$(extra)),GOARM=7)) \
+					$(if $(filter arm,$(arch)),$(if $(filter 5,$(extra)),GOARM=5)) \
+					$(if $(filter mips,$(arch)),$(if $(extra),GOMIPS=$(extra))) \
+					$(if $(filter mipsle,$(arch)),$(if $(extra),GOMIPS=$(extra))) \
+				) \
+			go build -trimpath -ldflags "$(LDFLAGS)" -tags frps \
+				-o ./release/$(FILE_PREFIX)frps_$(SUFFIX)$(FILE_EXT) ./cmd/frps || exit 1; \
 		fi; \
-		\
-		case "$${n}" in \
-			$(FRPC_ONLY_LIST)) is_frpc_only=1 ;; \
-		esac; \
-		\
-		case "$${n}" in \
-			$(CGO_ENABLED_LIST)) cgo_enabled=1; build_mode='-buildmode=c-shared' ;; \
-		esac; \
-		\
-		echo "Build $${os}-$${arch}$${extra:+ ($${extra})} (CGO=$${cgo_enabled}, FRPC Only: $${is_frpc_only})..."; \
-		\
-		env CGO_ENABLED=$${cgo_enabled} GOOS=$${os} GOARCH=$${arch} $${flags} go build $${build_mode} -trimpath -ldflags "$(LDFLAGS)" -tags frpc -o ./release/frpc_$${target_suffix} ./cmd/frpc; \
-		\
-		if [ "$${is_frpc_only}" -eq 0 ]; then \
-			env CGO_ENABLED=0 GOOS=$${os} GOARCH=$${arch} $${flags} go build -trimpath -ldflags "$(LDFLAGS)" -tags frps -o ./release/frps_$${target_suffix} ./cmd/frps; \
-		fi; \
-		\
-		echo "Build $${os}-$${arch}$${extra:+ ($${extra})} done"; \
 	)
-	
-	## Windows 文件重命名
-	@mv ./release/frpc_windows_amd64 ./release/frpc_windows_amd64.exe
-	@mv ./release/frps_windows_amd64 ./release/frps_windows_amd64.exe
-	@mv ./release/frpc_windows_arm64 ./release/frpc_windows_arm64.exe
-	@mv ./release/frps_windows_arm64 ./release/frps_windows_arm64.exe
-	
-	## Android 文件重命名
-	@mv ./release/frpc_android_amd64 ./release/libfrpc_android_amd64.so
-	@mv ./release/frpc_android_arm ./release/libfrpc_android_arm.so
-	@mv ./release/frpc_android_arm64 ./release/libfrpc_android_arm64.so
-	@mv ./release/frpc_android_386 ./release/libfrpc_android_386.so
+	@echo "All builds done."
