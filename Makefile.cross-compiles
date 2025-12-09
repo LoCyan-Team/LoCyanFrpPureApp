@@ -2,19 +2,32 @@ export PATH := $(PATH):`go env GOPATH`/bin
 export GO111MODULE=on
 LDFLAGS := -s -w
 
+# --- 核心平台列表 ---
 os-archs=darwin:amd64 darwin:arm64 freebsd:amd64 linux:amd64 linux:arm:7 linux:arm:5 linux:arm64 windows:amd64 windows:arm64 linux:mips64 linux:mips64le linux:mips:softfloat linux:mipsle:softfloat linux:riscv64 linux:loong64
+
+# --- 只构建 frpc 的平台列表 ---
+frpc-only-os-archs=android:amd64 android:arm android:arm64 android:386
+
+# --- 需要 CGO_ENABLED=1 和 -buildmode=c-shared 的平台列表 ---
+cgo-enabled-archs=android:amd64 android:arm android:arm64 android:386
+
+ALL_ARCHS=$(shell echo $(os-archs) $(frpc-only-os-archs) $(cgo-enabled-archs) | tr ' ' '\n' | sort -u)
 
 all: build
 
 build: app
 
 app:
-	@$(foreach n, $(os-archs), \
+	@$(foreach n, $(ALL_ARCHS), \
 		os=$(shell echo "$(n)" | cut -d : -f 1); \
 		arch=$(shell echo "$(n)" | cut -d : -f 2); \
 		extra=$(shell echo "$(n)" | cut -d : -f 3); \
 		flags=''; \
 		target_suffix=$${os}_$${arch}; \
+		is_frpc_only=0; \
+		cgo_enabled=0; \
+		build_mode=''; \
+		\
 		if [ "$${os}" = "linux" ] && [ "$${arch}" = "arm" ] && [ "$${extra}" != "" ] ; then \
 			if [ "$${extra}" = "7" ]; then \
 				flags=GOARM=7; \
@@ -24,14 +37,32 @@ app:
 				target_suffix=$${os}_arm; \
 			fi; \
 		elif [ "$${os}" = "linux" ] && ([ "$${arch}" = "mips" ] || [ "$${arch}" = "mipsle" ]) && [ "$${extra}" != "" ] ; then \
-		    flags=GOMIPS=$${extra}; \
+		    flags=GOMIPS=$${extra}; \
 		fi; \
-		echo "Build $${os}-$${arch}$${extra:+ ($${extra})}..."; \
-		env CGO_ENABLED=0 GOOS=$${os} GOARCH=$${arch} $${flags} go build -trimpath -ldflags "$(LDFLAGS)" -tags frpc -o ./release/frpc_$${target_suffix} ./cmd/frpc; \
-		env CGO_ENABLED=0 GOOS=$${os} GOARCH=$${arch} $${flags} go build -trimpath -ldflags "$(LDFLAGS)" -tags frps -o ./release/frps_$${target_suffix} ./cmd/frps; \
+		\
+		$(if $(findstring $(n),$(frpc-only-os-archs)),is_frpc_only=1;); \
+		\
+		$(if $(findstring $(n),$(cgo-enabled-archs)),cgo_enabled=1; build_mode='-buildmode=c-shared';); \
+		\
+		echo "Build $${os}-$${arch}$${extra:+ ($${extra})} (CGO=$${cgo_enabled}, FRPC Only: $${is_frpc_only})..."; \
+		\
+		env CGO_ENABLED=$${cgo_enabled} GOOS=$${os} GOARCH=$${arch} $${flags} go build $${build_mode} -trimpath -ldflags "$(LDFLAGS)" -tags frpc -o ./release/frpc_$${target_suffix} ./cmd/frpc; \
+		\
+		if [ "$${is_frpc_only}" -eq 0 ]; then \
+			env CGO_ENABLED=0 GOOS=$${os} GOARCH=$${arch} $${flags} go build -trimpath -ldflags "$(LDFLAGS)" -tags frps -o ./release/frps_$${target_suffix} ./cmd/frps; \
+		fi; \
+		\
 		echo "Build $${os}-$${arch}$${extra:+ ($${extra})} done"; \
 	)
+	
+	## Windows 文件重命名
 	@mv ./release/frpc_windows_amd64 ./release/frpc_windows_amd64.exe
 	@mv ./release/frps_windows_amd64 ./release/frps_windows_amd64.exe
 	@mv ./release/frpc_windows_arm64 ./release/frpc_windows_arm64.exe
 	@mv ./release/frps_windows_arm64 ./release/frps_windows_arm64.exe
+	
+	## Android 文件重命名
+	@mv ./release/frpc_android_amd64 ./release/libfrpc_android_amd64.so
+	@mv ./release/frpc_android_arm ./release/libfrpc_android_arm.so
+	@mv ./release/frpc_android_arm64 ./release/libfrpc_android_arm64.so
+	@mv ./release/frpc_android_386 ./release/libfrpc_android_386.so
