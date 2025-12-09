@@ -27,6 +27,7 @@ app:
 		is_frpc_only=0; \
 		cgo_enabled=0; \
 		build_mode=''; \
+		platform="$${os}:$${arch}$${extra:+:$${extra}}"; \
 		\
 		if [ "$${os}" = "linux" ] && [ "$${arch}" = "arm" ] && [ "$${extra}" != "" ] ; then \
 			if [ "$${extra}" = "7" ]; then \
@@ -40,9 +41,14 @@ app:
 		    flags=GOMIPS=$${extra}; \
 		fi; \
 		\
-		$(if $(findstring $(n),$(frpc-only-os-archs)),is_frpc_only=1;); \
+		if echo "$(frpc-only-os-archs)" | grep -w "$${n}" > /dev/null; then \
+			is_frpc_only=1; \
+		fi; \
 		\
-		$(if $(findstring $(n),$(cgo-enabled-archs)),cgo_enabled=1; build_mode='-buildmode=c-shared';); \
+		if echo "$(cgo-enabled-archs)" | grep -w "$${n}" > /dev/null; then \
+			cgo_enabled=1; \
+			build_mode='-buildmode=c-shared'; \
+		fi; \
 		\
 		echo "Build $${os}-$${arch}$${extra:+ ($${extra})} (CGO=$${cgo_enabled}, FRPC Only: $${is_frpc_only})..."; \
 		\
