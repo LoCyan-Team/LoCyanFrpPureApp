@@ -12,7 +12,7 @@ OS_ARCHS := darwin:amd64 darwin:arm64 freebsd:amd64 \
 	linux:mips64 linux:mips64le linux:mips:softfloat linux:mipsle:softfloat \
 	linux:riscv64 linux:loong64
 
-FRPC_ONLY_ARCHS := android:amd64 android:arm android:arm64 android:386
+FRPC_ONLY_ARCHS := android:arm android:arm64
 CGO_ENABLED_ARCHS := android:arm android:arm64
 
 ALL_ARCHS := $(shell echo $(OS_ARCHS) $(FRPC_ONLY_ARCHS) $(CGO_ENABLED_ARCHS) | tr ' ' '\n' | sort -u)
