@@ -13,7 +13,7 @@ OS_ARCHS := darwin:amd64 darwin:arm64 freebsd:amd64 \
 	linux:riscv64 linux:loong64
 
 FRPC_ONLY_ARCHS := android:amd64 android:arm android:arm64 android:386
-CGO_ENABLED_ARCHS := android:amd64 android:arm android:arm64 android:386
+CGO_ENABLED_ARCHS := android:arm android:arm64
 
 ALL_ARCHS := $(shell echo $(OS_ARCHS) $(FRPC_ONLY_ARCHS) $(CGO_ENABLED_ARCHS) | tr ' ' '\n' | sort -u)
 
@@ -66,17 +66,15 @@ define DO_BUILD
   # --- Windows 后缀 ---
   $(if $(filter windows,$(OS)), $(eval FILE_EXT := .exe))
 
-  # --- Android 配置 (修复点: 增加 API Level 24) ---
+  # --- Android 配置 ---
   $(if $(filter android,$(OS)),\
      $(eval FILE_PREFIX := lib)\
      $(eval FILE_EXT := .so)\
      $(if $(filter 1,$(USE_CGO)),\
         $(eval BUILD_MODE := -buildmode=c-shared)\
         \
-        $(if $(filter 386,$(ARCH)),   $(eval CC_CMD := zig cc -target x86-linux-android24))\
-        $(if $(filter amd64,$(ARCH)), $(eval CC_CMD := zig cc -target x86_64-linux-android24))\
-        $(if $(filter arm,$(ARCH)),   $(eval CC_CMD := zig cc -target arm-linux-androideabi24))\
-        $(if $(filter arm64,$(ARCH)), $(eval CC_CMD := zig cc -target aarch64-linux-android24))\
+        $(if $(filter arm,$(ARCH)),   $(eval CC_CMD := zig cc -target arm-linux-androideabi))\
+        $(if $(filter arm64,$(ARCH)), $(eval CC_CMD := zig cc -target aarch64-linux-android))\
         \
         $(eval BUILD_ENV += CC="$(CC_CMD)")\
         $(eval BUILD_ENV += CXX="$(CC_CMD)")\
