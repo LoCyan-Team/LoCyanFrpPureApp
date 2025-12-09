@@ -70,6 +70,7 @@ define DO_BUILD
      $(eval FILE_PREFIX := lib)\
      $(eval FILE_EXT := .so)\
      $(if $(filter 1,$(USE_CGO)),\
+        $(eval BUILD_ENV += CC=arm-linux-gnueabihf-gcc)\
         $(eval BUILD_MODE := -buildmode=c-shared)\
      )\
   )
