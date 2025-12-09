@@ -50,7 +50,6 @@ define DO_BUILD
   $(eval BUILD_MODE := )
   $(eval FILE_EXT := )
   $(eval FILE_PREFIX := )
-  $(eval CC_CMD := )
 
   # --- Linux ARM/MIPS 处理 ---
   $(if $(filter linux,$(OS)),\
@@ -72,12 +71,6 @@ define DO_BUILD
      $(eval FILE_EXT := .so)\
      $(if $(filter 1,$(USE_CGO)),\
         $(eval BUILD_MODE := -buildmode=c-shared)\
-        \
-        $(if $(filter arm,$(ARCH)),   $(eval CC_CMD := zig cc -target arm-linux-androideabi))\
-        $(if $(filter arm64,$(ARCH)), $(eval CC_CMD := zig cc -target aarch64-linux-android))\
-        \
-        $(eval BUILD_ENV += CC="$(CC_CMD)")\
-        $(eval BUILD_ENV += CXX="$(CC_CMD)")\
      )\
   )
 
@@ -87,7 +80,6 @@ build_$(OS)_$(ARCH)$(if $(EXTRA),_$(EXTRA)):
 	@echo "--------------------------------------------------"
 	@echo "Target: $(1)"
 	@echo "  -> OS: $(OS), Arch: $(ARCH), Extra: $(EXTRA)"
-	@if [ "$(USE_CGO)" = "1" ] && [ "$(OS)" = "android" ]; then echo "  -> CC: $(CC_CMD)"; fi
 	@echo "  -> Building frpc..."
 	@env $(BUILD_ENV) go build $(BUILD_MODE) -trimpath -ldflags "$(LDFLAGS)" -tags frpc -o ./release/$(FILE_PREFIX)frpc_$(SUFFIX)$(FILE_EXT) ./cmd/frpc
 	@if [ "$(IS_FRPC_ONLY)" = "0" ]; then \
