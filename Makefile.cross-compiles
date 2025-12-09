@@ -36,83 +36,59 @@ release_dir:
 # 3. 核心模板函数 (DO_BUILD)
 # -------------------------------------------------------------------------
 define DO_BUILD
-  # 1. 解析参数
   $(eval PARAMS := $(subst :, ,$(1)))
   $(eval OS := $(word 1,$(PARAMS)))
   $(eval ARCH := $(word 2,$(PARAMS)))
   $(eval EXTRA := $(word 3,$(PARAMS)))
 
-  # 2. 计算属性
   $(eval IS_FRPC_ONLY := $(if $(filter $(1),$(FRPC_ONLY_ARCHS)),1,0))
   $(eval USE_CGO := $(if $(filter $(1),$(CGO_ENABLED_ARCHS)),1,0))
 
-  # 3. 基础文件名后缀
   $(eval SUFFIX := $(OS)_$(ARCH))
   
-  # 4. 初始化构建参数
   $(eval BUILD_ENV := CGO_ENABLED=$(USE_CGO) GOOS=$(OS) GOARCH=$(ARCH))
   $(eval BUILD_MODE := )
   $(eval FILE_EXT := )
   $(eval FILE_PREFIX := )
   $(eval CC_CMD := )
 
-  # 5. 处理特殊平台逻辑
-
-  # --- Linux ARM 特殊处理 ---
+  # --- Linux ARM/MIPS 处理 ---
   $(if $(filter linux,$(OS)),\
     $(if $(filter arm,$(ARCH)),\
-      $(if $(filter 7,$(EXTRA)),\
-         $(eval SUFFIX := $(OS)_arm_hf)\
-         $(eval BUILD_ENV += GOARM=7),\
-      )\
-      $(if $(filter 5,$(EXTRA)),\
-         $(eval SUFFIX := $(OS)_arm)\
-         $(eval BUILD_ENV += GOARM=5),\
-      )\
+      $(if $(filter 7,$(EXTRA)), $(eval SUFFIX := $(OS)_arm_hf) $(eval BUILD_ENV += GOARM=7))\
+      $(if $(filter 5,$(EXTRA)), $(eval SUFFIX := $(OS)_arm) $(eval BUILD_ENV += GOARM=5))\
     )\
-  )
-
-  # --- Linux MIPS 特殊处理 ---
-  $(if $(filter linux,$(OS)),\
     $(if $(filter mips mipsle,$(ARCH)),\
-      $(if $(EXTRA),\
-        $(eval BUILD_ENV += GOMIPS=$(EXTRA)),\
-      )\
+      $(if $(EXTRA), $(eval BUILD_ENV += GOMIPS=$(EXTRA)))\
     )\
   )
 
   # --- Windows 后缀 ---
-  $(if $(filter windows,$(OS)),\
-     $(eval FILE_EXT := .exe)\
-  )
+  $(if $(filter windows,$(OS)), $(eval FILE_EXT := .exe))
 
-  # --- Android 库文件及 Zig 编译器配置 ---
+  # --- Android 配置 (修复点: 增加 API Level 24) ---
   $(if $(filter android,$(OS)),\
      $(eval FILE_PREFIX := lib)\
      $(eval FILE_EXT := .so)\
      $(if $(filter 1,$(USE_CGO)),\
         $(eval BUILD_MODE := -buildmode=c-shared)\
         \
-        # 根据 Go 架构选择对应的 Zig Target \
-        $(if $(filter 386,$(ARCH)),   $(eval CC_CMD := zig cc -target x86-linux-android))\
-        $(if $(filter amd64,$(ARCH)), $(eval CC_CMD := zig cc -target x86_64-linux-android))\
-        $(if $(filter arm,$(ARCH)),   $(eval CC_CMD := zig cc -target arm-linux-androideabi))\
-        $(if $(filter arm64,$(ARCH)), $(eval CC_CMD := zig cc -target aarch64-linux-android))\
+        $(if $(filter 386,$(ARCH)),   $(eval CC_CMD := zig cc -target x86-linux-android24))\
+        $(if $(filter amd64,$(ARCH)), $(eval CC_CMD := zig cc -target x86_64-linux-android24))\
+        $(if $(filter arm,$(ARCH)),   $(eval CC_CMD := zig cc -target arm-linux-androideabi24))\
+        $(if $(filter arm64,$(ARCH)), $(eval CC_CMD := zig cc -target aarch64-linux-android24))\
         \
-        # 将 CC 设置添加到环境变量中 \
         $(eval BUILD_ENV += CC="$(CC_CMD)")\
         $(eval BUILD_ENV += CXX="$(CC_CMD)")\
      )\
   )
 
-  # 6. 生成构建命令
   app: build_$(OS)_$(ARCH)$(if $(EXTRA),_$(EXTRA))
 
 build_$(OS)_$(ARCH)$(if $(EXTRA),_$(EXTRA)):
 	@echo "--------------------------------------------------"
 	@echo "Target: $(1)"
 	@echo "  -> OS: $(OS), Arch: $(ARCH), Extra: $(EXTRA)"
-	@echo "  -> CGO: $(USE_CGO), Mode: $(if $(BUILD_MODE),$(BUILD_MODE),default)"
 	@if [ "$(USE_CGO)" = "1" ] && [ "$(OS)" = "android" ]; then echo "  -> CC: $(CC_CMD)"; fi
 	@echo "  -> Building frpc..."
 	@env $(BUILD_ENV) go build $(BUILD_MODE) -trimpath -ldflags "$(LDFLAGS)" -tags frpc -o ./release/$(FILE_PREFIX)frpc_$(SUFFIX)$(FILE_EXT) ./cmd/frpc
@@ -123,10 +99,6 @@ build_$(OS)_$(ARCH)$(if $(EXTRA),_$(EXTRA)):
 	@echo "  -> Done."
 
 endef
-
-# -------------------------------------------------------------------------
-# 4. 循环生成规则
-# -------------------------------------------------------------------------
 
 $(foreach item,$(ALL_ARCHS),$(eval $(call DO_BUILD,$(item))))
 
