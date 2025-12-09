@@ -6,20 +6,15 @@ LDFLAGS := -s -w
 # 1. 平台列表配置
 # -------------------------------------------------------------------------
 
-# 普通构建列表
 OS_ARCHS := darwin:amd64 darwin:arm64 freebsd:amd64 \
 	linux:amd64 linux:arm:7 linux:arm:5 linux:arm64 \
 	windows:amd64 windows:arm64 \
 	linux:mips64 linux:mips64le linux:mips:softfloat linux:mipsle:softfloat \
 	linux:riscv64 linux:loong64
 
-# 只构建 frpc 的列表
 FRPC_ONLY_ARCHS := android:amd64 android:arm android:arm64 android:386
-
-# 需要开启 CGO 的列表
 CGO_ENABLED_ARCHS := android:amd64 android:arm android:arm64 android:386
 
-# 组合所有列表并去重
 ALL_ARCHS := $(shell echo $(OS_ARCHS) $(FRPC_ONLY_ARCHS) $(CGO_ENABLED_ARCHS) | tr ' ' '\n' | sort -u)
 
 # -------------------------------------------------------------------------
@@ -32,7 +27,6 @@ all: build
 
 build: app
 
-# 确保输出目录存在
 app: | release_dir
 
 release_dir:
@@ -40,7 +34,6 @@ release_dir:
 
 # -------------------------------------------------------------------------
 # 3. 核心模板函数 (DO_BUILD)
-#    参数 $(1): 完整的平台字符串 (例如 linux:arm:7)
 # -------------------------------------------------------------------------
 define DO_BUILD
   # 1. 解析参数
@@ -61,9 +54,10 @@ define DO_BUILD
   $(eval BUILD_MODE := )
   $(eval FILE_EXT := )
   $(eval FILE_PREFIX := )
+  $(eval CC_CMD := )
 
-  # 5. 处理特殊平台逻辑 (Linux ARM/MIPS, Windows, Android)
-  
+  # 5. 处理特殊平台逻辑
+
   # --- Linux ARM 特殊处理 ---
   $(if $(filter linux,$(OS)),\
     $(if $(filter arm,$(ARCH)),\
@@ -92,28 +86,34 @@ define DO_BUILD
      $(eval FILE_EXT := .exe)\
   )
 
-  # --- Android 库文件处理 ---
+  # --- Android 库文件及 Zig 编译器配置 ---
   $(if $(filter android,$(OS)),\
      $(eval FILE_PREFIX := lib)\
      $(eval FILE_EXT := .so)\
      $(if $(filter 1,$(USE_CGO)),\
-        $(eval BUILD_MODE := -buildmode=c-shared),\
+        $(eval BUILD_MODE := -buildmode=c-shared)\
+        \
+        # 根据 Go 架构选择对应的 Zig Target \
+        $(if $(filter 386,$(ARCH)),   $(eval CC_CMD := zig cc -target x86-linux-android))\
+        $(if $(filter amd64,$(ARCH)), $(eval CC_CMD := zig cc -target x86_64-linux-android))\
+        $(if $(filter arm,$(ARCH)),   $(eval CC_CMD := zig cc -target arm-linux-androideabi))\
+        $(if $(filter arm64,$(ARCH)), $(eval CC_CMD := zig cc -target aarch64-linux-android))\
+        \
+        # 将 CC 设置添加到环境变量中 \
+        $(eval BUILD_ENV += CC="$(CC_CMD)")\
+        $(eval BUILD_ENV += CXX="$(CC_CMD)")\
      )\
   )
 
-  # 6. 生成构建命令 (frpc)
-  #    注意：这里生成的是具体的 make target 命令
-  #    使用 @echo 确保在执行前打印
-  
-  # 将当前架构添加到 app 依赖中
+  # 6. 生成构建命令
   app: build_$(OS)_$(ARCH)$(if $(EXTRA),_$(EXTRA))
 
-  # 定义该架构的具体构建规则
 build_$(OS)_$(ARCH)$(if $(EXTRA),_$(EXTRA)):
 	@echo "--------------------------------------------------"
 	@echo "Target: $(1)"
 	@echo "  -> OS: $(OS), Arch: $(ARCH), Extra: $(EXTRA)"
 	@echo "  -> CGO: $(USE_CGO), Mode: $(if $(BUILD_MODE),$(BUILD_MODE),default)"
+	@if [ "$(USE_CGO)" = "1" ] && [ "$(OS)" = "android" ]; then echo "  -> CC: $(CC_CMD)"; fi
 	@echo "  -> Building frpc..."
 	@env $(BUILD_ENV) go build $(BUILD_MODE) -trimpath -ldflags "$(LDFLAGS)" -tags frpc -o ./release/$(FILE_PREFIX)frpc_$(SUFFIX)$(FILE_EXT) ./cmd/frpc
 	@if [ "$(IS_FRPC_ONLY)" = "0" ]; then \
@@ -128,7 +128,6 @@ endef
 # 4. 循环生成规则
 # -------------------------------------------------------------------------
 
-# 使用 foreach 遍历列表，并 eval 执行上面的模板
 $(foreach item,$(ALL_ARCHS),$(eval $(call DO_BUILD,$(item))))
 
 clean:
