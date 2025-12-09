@@ -5,13 +5,17 @@ LDFLAGS := -s -w
 # --- 核心平台列表 ---
 os-archs=darwin:amd64 darwin:arm64 freebsd:amd64 linux:amd64 linux:arm:7 linux:arm:5 linux:arm64 windows:amd64 windows:arm64 linux:mips64 linux:mips64le linux:mips:softfloat linux:mipsle:softfloat linux:riscv64 linux:loong64
 
-# --- 只构建 frpc 的平台列表 ---
+# --- 只构建 frpc 的平台列表 (frps 将被跳过) ---
 frpc-only-os-archs=android:amd64 android:arm android:arm64 android:386
 
 # --- 需要 CGO_ENABLED=1 和 -buildmode=c-shared 的平台列表 ---
 cgo-enabled-archs=android:amd64 android:arm android:arm64 android:386
 
+# 组合所有需要构建的平台
 ALL_ARCHS=$(shell echo $(os-archs) $(frpc-only-os-archs) $(cgo-enabled-archs) | tr ' ' '\n' | sort -u)
+
+FRPC_ONLY_LIST=$(subst $(space),|,$(frpc-only-os-archs))
+CGO_ENABLED_LIST=$(subst $(space),|,$(cgo-enabled-archs))
 
 all: build
 
@@ -27,7 +31,6 @@ app:
 		is_frpc_only=0; \
 		cgo_enabled=0; \
 		build_mode=''; \
-		platform="$${os}:$${arch}$${extra:+:$${extra}}"; \
 		\
 		if [ "$${os}" = "linux" ] && [ "$${arch}" = "arm" ] && [ "$${extra}" != "" ] ; then \
 			if [ "$${extra}" = "7" ]; then \
@@ -41,14 +44,13 @@ app:
 		    flags=GOMIPS=$${extra}; \
 		fi; \
 		\
-		if echo "$(frpc-only-os-archs)" | grep -w "$${n}" > /dev/null; then \
-			is_frpc_only=1; \
-		fi; \
+		case "$${n}" in \
+			$(FRPC_ONLY_LIST)) is_frpc_only=1 ;; \
+		esac; \
 		\
-		if echo "$(cgo-enabled-archs)" | grep -w "$${n}" > /dev/null; then \
-			cgo_enabled=1; \
-			build_mode='-buildmode=c-shared'; \
-		fi; \
+		case "$${n}" in \
+			$(CGO_ENABLED_LIST)) cgo_enabled=1; build_mode='-buildmode=c-shared' ;; \
+		esac; \
 		\
 		echo "Build $${os}-$${arch}$${extra:+ ($${extra})} (CGO=$${cgo_enabled}, FRPC Only: $${is_frpc_only})..."; \
 		\
