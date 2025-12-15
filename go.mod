@@ -26,7 +26,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	github.com/tidwall/gjson v1.18.0
 	github.com/vishvananda/netlink v1.3.1
-	github.com/xtaci/kcp-go/v5 v5.6.42
+	github.com/xtaci/kcp-go/v5 v5.6.57
 	golang.org/x/crypto v0.46.0
 	golang.org/x/net v0.47.0
 	golang.org/x/oauth2 v0.34.0

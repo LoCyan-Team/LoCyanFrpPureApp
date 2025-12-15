@@ -192,8 +192,8 @@ github.com/vishvananda/netlink v1.3.1 h1:3AEMt62VKqz90r0tmNhog0r/PpWKmrEShJU0wJW
 github.com/vishvananda/netlink v1.3.1/go.mod h1:ARtKouGSTGchR8aMwmkzC0qiNPrrWO5JS/XMVl45+b4=
 github.com/vishvananda/netns v0.0.5 h1:DfiHV+j8bA32MFM7bfEunvT8IAqQ/NzSJHtcmW5zdEY=
 github.com/vishvananda/netns v0.0.5/go.mod h1:SpkAiCQRtJ6TvvxPnOSyH3BMl6unz3xZlaprSwhNNJM=
-github.com/xtaci/kcp-go/v5 v5.6.42 h1:8rzl3iEeqi9hr9Ord9+US1Y7PJjfjh3Di4zIR8w3PHA=
-github.com/xtaci/kcp-go/v5 v5.6.42/go.mod h1:h7RBeE7Vm9xGLE0gK1JITz09q9rO2oFqDyciQhqlgfg=
+github.com/xtaci/kcp-go/v5 v5.6.57 h1:C5mVsgLWD9yeIguOO5CsvTNSF4HKjLohTxcuLdi+AcU=
+github.com/xtaci/kcp-go/v5 v5.6.57/go.mod h1:9O3D8WR+cyyUjGiTILYfg17vn72otWuXK2AFfqIe6CM=
 github.com/xtaci/lossyconn v0.0.0-20200209145036-adba10fffc37 h1:EWU6Pktpas0n8lLQwDsRyZfmkPeRbdgPtW609es+/9E=
 github.com/xtaci/lossyconn v0.0.0-20200209145036-adba10fffc37/go.mod h1:HpMP7DB2CyokmAh4lp0EQnnWhmycP/TvwBGzvuie+H0=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
