@@ -3,6 +3,12 @@ FROM golang:1.24 AS building
 COPY . /building
 WORKDIR /building
 
+ARG GO111MODULE
+ARG GOPROXY
+
+ENV GO111MODULE=${GO_PROXY:+GO_PROXY}
+ENV GOPROXY=${GO_PROXY:+$GO_PROXY}
+
 RUN make frpc
 
 FROM alpine:3
