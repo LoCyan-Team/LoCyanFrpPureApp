@@ -18,15 +18,16 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/fatedier/frp/pkg/api"
-	"github.com/fatedier/frp/pkg/api/server/tunnel"
-	"github.com/fatedier/frp/pkg/database"
 	"net"
 	"runtime/debug"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/fatedier/frp/pkg/api"
+	"github.com/fatedier/frp/pkg/api/server/tunnel"
+	"github.com/fatedier/frp/pkg/database"
 
 	"github.com/samber/lo"
 	"golang.org/x/time/rate"
@@ -524,10 +525,17 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 			return
 		}
 
+		var tunnelName string
+		if strings.Contains(pxyMsg.ProxyName, ".") {
+			tunnelName = strings.Split(pxyMsg.ProxyName, ".")[1]
+		} else {
+			tunnelName = pxyMsg.ProxyName
+		}
+
 		verifyTunnelParams := tunnel.PostTunnelParams{
 			NodeId:         ctl.serverCfg.NodeId,
 			FrpToken:       ctl.loginMsg.User,
-			TunnelName:     strings.Split(pxyMsg.ProxyName, ".")[1],
+			TunnelName:     tunnelName,
 			TunnelType:     pxyMsg.ProxyType,
 			UseCompression: pxyMsg.UseCompression,
 			UseEncryption:  pxyMsg.UseEncryption,
@@ -551,9 +559,10 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		}
 		if rsVerifyTunnel.Status != 200 {
 			return "", errors.New(fmt.Sprintf(
-				"API Error: verify tunnel failed (status: %d, message: %s)",
+				"API Error: verify tunnel failed (status: %d, message: %s, proxyName: %s)",
 				rsVerifyTunnel.Status,
 				rsVerifyTunnel.Message,
+				tunnelName,
 			))
 		}
 
