@@ -163,6 +163,8 @@ type Control struct {
 	xl     *xlog.Logger
 	ctx    context.Context
 	doneCh chan struct{}
+
+	closedProxyManager *database.ClosedProxyManager
 }
 
 // NewControl TODO(fatedier): Referencing the implementation of frpc, encapsulate the input parameters as SessionContext.
@@ -179,30 +181,32 @@ func NewControl(
 	serverCfg *v1.ServerConfig,
 	inboundLimit uint64,
 	outboundLimit uint64,
+	closedProxyManager *database.ClosedProxyManager,
 ) (*Control, error) {
 	poolCount := loginMsg.PoolCount
 	if poolCount > int(serverCfg.Transport.MaxPoolCount) {
 		poolCount = int(serverCfg.Transport.MaxPoolCount)
 	}
 	ctl := &Control{
-		rc:            rc,
-		pxyManager:    pxyManager,
-		pluginManager: pluginManager,
-		authVerifier:  authVerifier,
-		encryptionKey: encryptionKey,
-		conn:          ctlConn,
-		loginMsg:      loginMsg,
-		workConnCh:    make(chan net.Conn, poolCount+10),
-		proxies:       make(map[string]proxy.Proxy),
-		poolCount:     poolCount,
-		portsUsedNum:  0,
-		runID:         loginMsg.RunID,
-		serverCfg:     serverCfg,
-		xl:            xlog.FromContextSafe(ctx),
-		ctx:           ctx,
-		doneCh:        make(chan struct{}),
-		inboundLimit:  inboundLimit,
-		outboundLimit: outboundLimit,
+		rc:                 rc,
+		pxyManager:         pxyManager,
+		pluginManager:      pluginManager,
+		authVerifier:       authVerifier,
+		encryptionKey:      encryptionKey,
+		conn:               ctlConn,
+		loginMsg:           loginMsg,
+		workConnCh:         make(chan net.Conn, poolCount+10),
+		proxies:            make(map[string]proxy.Proxy),
+		poolCount:          poolCount,
+		portsUsedNum:       0,
+		runID:              loginMsg.RunID,
+		serverCfg:          serverCfg,
+		xl:                 xlog.FromContextSafe(ctx),
+		ctx:                ctx,
+		doneCh:             make(chan struct{}),
+		inboundLimit:       inboundLimit,
+		outboundLimit:      outboundLimit,
+		closedProxyManager: closedProxyManager,
 	}
 	ctl.lastPing.Store(time.Now())
 
@@ -484,21 +488,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 	}
 
 	// 判断
-	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
-	if err != nil {
-		xl.Infof(err.Error())
-	}
-	defer func() {
-		if closeErr := manager.Close(); closeErr != nil {
-			xl.Errorf("Failed to close database manager: %v", closeErr)
-			// 如果主错误为 nil，则返回关闭错误；否则保留主错误
-			if err == nil {
-				err = closeErr
-			}
-		}
-	}()
-
-	isClosed, err := manager.IsClosedByProxyName(pxyMsg.ProxyName)
+	isClosed, err := ctl.closedProxyManager.IsClosed(ctl.runID)
 	if err != nil {
 		return
 	}

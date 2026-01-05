@@ -414,14 +414,6 @@ func (svr *Service) deleteProxies(w http.ResponseWriter, r *http.Request) {
 
 // CloseProxy GET /api/proxies/close/{runId}
 func (svr *Service) CloseProxy(w http.ResponseWriter, r *http.Request) {
-
-	// CloseProxy 数据库维护
-	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
-	if err != nil {
-		log.Infof(err.Error())
-	}
-	defer manager.Close()
-
 	res := GeneralResponse{Code: 200}
 	log.Debugf("http request: [%s]", r.URL.Path)
 
@@ -451,7 +443,7 @@ func (svr *Service) CloseProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 这里仅能判断 runId
-	isClosed, err := manager.IsClosed(runId)
+	isClosed, err := svr.closedProxyManager.IsClosed(runId)
 	if err != nil {
 		res.Code = 400
 		res.Msg = "Can't search runId in database: " + err.Error()
@@ -484,7 +476,7 @@ func (svr *Service) CloseProxy(w http.ResponseWriter, r *http.Request) {
 	// 非官方客户端需要加黑，若 tag 为 admin 则加黑, user 则不加黑允许重连
 	if userType == "admin" {
 		for range ctl.proxies {
-			err := manager.AddClosedProxy(runId)
+			err := svr.closedProxyManager.AddClosedProxy(runId)
 			if err != nil {
 				res.Code = 400
 				res.Msg = "Can’t add closed proxy to database: " + err.Error()
@@ -518,17 +510,6 @@ func (svr *Service) CloseProxy(w http.ResponseWriter, r *http.Request) {
 
 // DeleteProxyFromDatabase GET /api/proxies/delete/{runId}
 func (svr *Service) DeleteProxyFromDatabase(w http.ResponseWriter, r *http.Request) {
-
-	// CloseProxy 数据库维护
-	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
-	if err != nil {
-		log.Errorf("Failed to open database: %v", err)
-		// 如果数据库打不开，应该直接返回 500，防止后续空指针
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer manager.Close()
-
 	res := GeneralResponse{Code: 200}
 	log.Debugf("http request: [%s]", r.URL.Path)
 
@@ -549,7 +530,7 @@ func (svr *Service) DeleteProxyFromDatabase(w http.ResponseWriter, r *http.Reque
 	}
 
 	// 先检查是否存在 (适配原有逻辑: 如果找不到则返回错误)
-	exists, err := manager.IsClosed(runId)
+	exists, err := svr.closedProxyManager.IsClosed(runId)
 	if err != nil {
 		res.Code = 500
 		res.Msg = "Database error: " + err.Error()
@@ -562,7 +543,7 @@ func (svr *Service) DeleteProxyFromDatabase(w http.ResponseWriter, r *http.Reque
 	}
 
 	// 执行删除
-	err = manager.DeleteClosed(runId)
+	err = svr.closedProxyManager.DeleteClosed(runId)
 	if err != nil {
 		res.Code = 500
 		res.Msg = "Can't delete proxy: " + err.Error()
@@ -586,14 +567,7 @@ func (svr *Service) ShowClosedProxy(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	// CloseProxy 数据库维护
-	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
-	if err != nil {
-		log.Infof(err.Error())
-	}
-	defer manager.Close()
-
-	proxies, err := manager.GetAllClosedProxies()
+	proxies, err := svr.closedProxyManager.GetAllClosedProxies()
 	if err != nil {
 		res.Code = 500
 		res.Msg = "Can't get proxies: " + err.Error()
@@ -614,14 +588,6 @@ func (svr *Service) ShowClosedProxy(w http.ResponseWriter, r *http.Request) {
 
 // AddProxyFromDatabase GET /api/proxies/delete/{runId}
 func (svr *Service) AddProxyFromDatabase(w http.ResponseWriter, r *http.Request) {
-
-	// CloseProxy 数据库维护
-	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
-	if err != nil {
-		log.Infof(err.Error())
-	}
-	defer manager.Close()
-
 	res := GeneralResponse{Code: 200}
 	log.Debugf("http request: [%s]", r.URL.Path)
 
@@ -659,7 +625,7 @@ func (svr *Service) AddProxyFromDatabase(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	if err := manager.AddClosedProxyWithType(runId, database.ClosedProxyType(userType)); err != nil {
+	if err := svr.closedProxyManager.AddClosedProxyWithType(runId, database.ClosedProxyType(userType)); err != nil {
 		res.Code = 500
 		res.Msg = "Database error: " + err.Error()
 		return

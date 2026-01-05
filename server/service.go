@@ -129,6 +129,8 @@ type Service struct {
 	ctx context.Context
 	// call cancel to stop service
 	cancel context.CancelFunc
+
+	closedProxyManager *database.ClosedProxyManager
 }
 
 func NewService(cfg *v1.ServerConfig) (*Service, error) {
@@ -159,6 +161,11 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 		return nil, err
 	}
 
+	closeProxyManager, err := database.NewClosedProxyManager("./closed_proxies.db")
+	if err != nil {
+		return nil, fmt.Errorf("init closed proxy manager db failed: %v", err)
+	}
+
 	svr := &Service{
 		ctlManager:    NewControlManager(),
 		pxyManager:    proxy.NewManager(),
@@ -168,13 +175,14 @@ func NewService(cfg *v1.ServerConfig) (*Service, error) {
 			TCPPortManager: ports.NewManager("tcp", cfg.ProxyBindAddr, cfg.AllowPorts),
 			UDPPortManager: ports.NewManager("udp", cfg.ProxyBindAddr, cfg.AllowPorts),
 		},
-		sshTunnelListener: netpkg.NewInternalListener(),
-		httpVhostRouter:   vhost.NewRouters(),
-		auth:              authRuntime,
-		webServer:         webServer,
-		tlsConfig:         tlsConfig,
-		cfg:               cfg,
-		ctx:               context.Background(),
+		sshTunnelListener:  netpkg.NewInternalListener(),
+		httpVhostRouter:    vhost.NewRouters(),
+		auth:               authRuntime,
+		webServer:          webServer,
+		tlsConfig:          tlsConfig,
+		cfg:                cfg,
+		ctx:                context.Background(),
+		closedProxyManager: closeProxyManager,
 	}
 	if webServer != nil {
 		webServer.RouteRegister(svr.registerRouteHandlers)
@@ -582,13 +590,6 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 	// Otherwise, we check if there is one controller has the same run id. If so, we release previous controller and start new one.
 	var err error
 	// 判断
-	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
-	if err != nil {
-		log.Errorf("Failed to open database: %v", err)
-		return err
-	}
-	defer manager.Close()
-
 	if loginMsg.RunID == "" {
 		generated, err := util.RandID()
 		if err != nil {
@@ -596,7 +597,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 		}
 		loginMsg.RunID = fmt.Sprintf("%d.%s", svr.cfg.NodeId, generated)
 	} else {
-		isClosed, err := manager.IsClosed(loginMsg.RunID)
+		isClosed, err := svr.closedProxyManager.IsClosed(loginMsg.RunID)
 		if err != nil {
 			return err
 		}
@@ -674,7 +675,21 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 	}
 
 	// TODO(fatedier): use SessionContext
-	ctl, err := NewControl(ctx, svr.rc, svr.pxyManager, svr.pluginManager, authVerifier, svr.auth.EncryptionKey(), ctlConn, !internal, loginMsg, svr.cfg, uint64(rsGetLimit.Data.Inbound), uint64(rsGetLimit.Data.Outbound))
+	ctl, err := NewControl(
+		ctx,
+		svr.rc,
+		svr.pxyManager,
+		svr.pluginManager,
+		authVerifier,
+		svr.auth.EncryptionKey(),
+		ctlConn,
+		!internal,
+		loginMsg,
+		svr.cfg,
+		uint64(rsGetLimit.Data.Inbound),
+		uint64(rsGetLimit.Data.Outbound),
+		svr.closedProxyManager,
+	)
 	if err != nil {
 		xl.Warnf("create new controller error: %v", err)
 		// don't return detailed errors to client
