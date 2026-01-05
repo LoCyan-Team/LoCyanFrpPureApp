@@ -584,17 +584,10 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 	// 判断
 	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
 	if err != nil {
-		log.Infof(err.Error())
+		log.Errorf("Failed to open database: %v", err)
+		return err
 	}
-	defer func() {
-		if closeErr := manager.Close(); closeErr != nil {
-			log.Errorf("Failed to close database manager: %v", closeErr)
-			// 如果主错误为 nil，则返回关闭错误；否则保留主错误
-			if err == nil {
-				err = closeErr
-			}
-		}
-	}()
+	defer manager.Close()
 
 	if loginMsg.RunID == "" {
 		generated, err := util.RandID()
@@ -603,7 +596,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 		}
 		loginMsg.RunID = fmt.Sprintf("%d.%s", svr.cfg.NodeId, generated)
 	} else {
-		isClosed, err := manager.IsClosedByRunID(loginMsg.RunID)
+		isClosed, err := manager.IsClosed(loginMsg.RunID)
 		if err != nil {
 			return err
 		}

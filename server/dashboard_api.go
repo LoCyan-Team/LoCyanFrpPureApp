@@ -17,11 +17,12 @@ package server
 import (
 	"cmp"
 	"encoding/json"
-	"github.com/fatedier/frp/pkg/database"
-	"github.com/fatedier/frp/pkg/msg"
 	"net/http"
 	"slices"
 	"strings"
+
+	"github.com/fatedier/frp/pkg/database"
+	"github.com/fatedier/frp/pkg/msg"
 
 	"github.com/gorilla/mux"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -450,7 +451,7 @@ func (svr *Service) CloseProxy(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// 这里仅能判断 runId
-	isClosed, err := manager.IsClosed(runId, "")
+	isClosed, err := manager.IsClosed(runId)
 	if err != nil {
 		res.Code = 400
 		res.Msg = "Can't search runId in database: " + err.Error()
@@ -482,8 +483,8 @@ func (svr *Service) CloseProxy(w http.ResponseWriter, r *http.Request) {
 
 	// 非官方客户端需要加黑，若 tag 为 admin 则加黑, user 则不加黑允许重连
 	if userType == "admin" {
-		for _, pxy := range ctl.proxies {
-			err := manager.AddClosedProxy(runId, pxy.GetName())
+		for range ctl.proxies {
+			err := manager.AddClosedProxy(runId)
 			if err != nil {
 				res.Code = 400
 				res.Msg = "Can’t add closed proxy to database: " + err.Error()
@@ -521,7 +522,10 @@ func (svr *Service) DeleteProxyFromDatabase(w http.ResponseWriter, r *http.Reque
 	// CloseProxy 数据库维护
 	manager, err := database.NewClosedProxyManager("./closed_proxies.db")
 	if err != nil {
-		log.Infof(err.Error())
+		log.Errorf("Failed to open database: %v", err)
+		// 如果数据库打不开，应该直接返回 500，防止后续空指针
+		w.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 	defer manager.Close()
 
@@ -537,19 +541,28 @@ func (svr *Service) DeleteProxyFromDatabase(w http.ResponseWriter, r *http.Reque
 	}()
 
 	params := mux.Vars(r)
-	proxyName := params["proxy_name"]
-	if proxyName == "" {
+	runId := params["runId"]
+	if runId == "" {
 		res.Code = 400
-		res.Msg = "Please provide a valid proxy name"
+		res.Msg = "Please provide a valid runId"
 		return
 	}
 
-	count, err := manager.DeleteByProxyName(proxyName)
-	if count < 1 {
-		res.Code = 400
-		res.Msg = "Can't find proxy"
+	// 先检查是否存在 (适配原有逻辑: 如果找不到则返回错误)
+	exists, err := manager.IsClosed(runId)
+	if err != nil {
+		res.Code = 500
+		res.Msg = "Database error: " + err.Error()
 		return
 	}
+	if !exists {
+		res.Code = 404 // 或者 404
+		res.Msg = "Can't find proxy with this runId"
+		return
+	}
+
+	// 执行删除
+	err = manager.DeleteClosed(runId)
 	if err != nil {
 		res.Code = 500
 		res.Msg = "Can't delete proxy: " + err.Error()
@@ -622,10 +635,10 @@ func (svr *Service) AddProxyFromDatabase(w http.ResponseWriter, r *http.Request)
 
 	// 必要参数
 	params := mux.Vars(r)
-	proxyName := params["proxy_name"]
-	if proxyName == "" {
+	runId := params["runId"]
+	if runId == "" {
 		res.Code = 400
-		res.Msg = "Please provide a valid proxy name"
+		res.Msg = "Please provide a valid runId"
 		return
 	}
 	userType := r.URL.Query().Get("type")
@@ -638,20 +651,18 @@ func (svr *Service) AddProxyFromDatabase(w http.ResponseWriter, r *http.Request)
 		res.Msg = "Please provide a valid user type"
 	}
 
-	// 先在本地检索是否存在 runId，若不存在则置空
-	if pxy, ok := svr.pxyManager.GetByName(proxyName); !ok {
-		if err := manager.AddClosedProxyWithType("", proxyName, database.ClosedProxyType(userType)); err != nil {
-			res.Code = 400
-			res.Msg = "Can't add proxy to blacklist: " + err.Error()
-			return
-		}
-	} else {
-		runId := pxy.GetLoginMsg().RunID
-		if err := manager.AddClosedProxyWithType(runId, proxyName, database.ClosedProxyType(userType)); err != nil {
-			res.Code = 400
-			res.Msg = "Can't add proxy to blacklist: " + err.Error()
-			return
-		}
+	// 先在本地检索是否存在该名称的代理
+	_, ok := svr.ctlManager.GetByID(runId)
+	if !ok {
+		res.Code = 404
+		res.Msg = "Proxy not found or not online, cannot retrieve RunID"
+		return
+	}
+
+	if err := manager.AddClosedProxyWithType(runId, database.ClosedProxyType(userType)); err != nil {
+		res.Code = 500
+		res.Msg = "Database error: " + err.Error()
+		return
 	}
 
 	res.Code = 200
