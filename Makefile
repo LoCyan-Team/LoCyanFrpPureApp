@@ -1,6 +1,6 @@
 export PATH := $(PATH):`go env GOPATH`/bin
 export GO111MODULE=on
-LDFLAGS := -s -w
+LDFLAGS := -s -w -checklinkname=0
 
 all: env fmt build
 
