@@ -563,8 +563,11 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		}
 	}
 
-	lr := rate.NewLimiter(rate.Limit(float64(ctl.inboundLimit)/8), int(ctl.inboundLimit)/8)
-	lw := rate.NewLimiter(rate.Limit(float64(ctl.outboundLimit)/8), int(ctl.outboundLimit)/8)
+	const MbitToBytes = 1000000 / 8
+	limitRN := float64(ctl.inboundLimit) * MbitToBytes
+	limitWN := float64(ctl.outboundLimit) * MbitToBytes
+	lr := rate.NewLimiter(rate.Limit(limitRN), int(limitRN))
+	lw := rate.NewLimiter(rate.Limit(limitWN), int(limitWN))
 
 	// User info
 	userInfo := plugin.UserInfo{

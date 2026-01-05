@@ -24,13 +24,13 @@ import (
 	"sync"
 	"time"
 
+	"github.com/fatedier/frp/pkg/util/limit"
 	libio "github.com/fatedier/golib/io"
 	"golang.org/x/time/rate"
 
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/fatedier/frp/pkg/msg"
 	plugin "github.com/fatedier/frp/pkg/plugin/server"
-	"github.com/fatedier/frp/pkg/util/limit"
 	netpkg "github.com/fatedier/frp/pkg/util/net"
 	"github.com/fatedier/frp/pkg/util/xlog"
 	"github.com/fatedier/frp/server/controller"
