@@ -62,8 +62,8 @@ func init() {
 		fmt.Sprintf("允许的不安全特性，可选值: %s", strings.Join(security.ClientUnsafeFeatures, ", ")))
 
 	//rootCmd.PersistentFlags().StringVarP(&quickStart, "start", "s", "", "LoCyanFrp 快速启动隧道")
-	rootCmd.PersistentFlags().StringVarP(&lcfFrpToken, "token", "u", "", "LoCyanFrp 用户访问令牌")
-	rootCmd.PersistentFlags().Int64SliceVarP(&lcfTunnelIds, "id", "t", []int64{}, "LoCyanFrp 隧道 ID 列表")
+	rootCmd.PersistentFlags().StringVarP(&lcfFrpToken, "lcf_token", "u", "", "LoCyanFrp 用户访问令牌")
+	rootCmd.PersistentFlags().Int64SliceVarP(&lcfTunnelIds, "lcf_tunnel", "t", []int64{}, "LoCyanFrp 隧道 ID 列表")
 }
 
 var rootCmd = &cobra.Command{
