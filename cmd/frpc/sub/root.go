@@ -57,13 +57,13 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "./config.json", "指定 Frp 客户端配置文件")
 	rootCmd.PersistentFlags().StringVarP(&cfgDir, "config_dir", "", "", "指定配置文件夹，一个文件将运行一个 Frp 客户端服务")
 	rootCmd.PersistentFlags().BoolVarP(&showVersion, "version", "v", false, "Frp 客户端版本")
-	rootCmd.PersistentFlags().BoolVarP(&strictConfigMode, "strict_config", "", true, "严格配置解析模式，未知配置将产生错误")
+	rootCmd.PersistentFlags().BoolVarP(&strictConfigMode, "strict_config", "", true, "严格配置解析模式，未知配置将产导致错误")
 	rootCmd.PersistentFlags().StringSliceVarP(&allowUnsafe, "allow-unsafe", "", []string{},
-		fmt.Sprintf("allowed unsafe features, one or more of: %s", strings.Join(security.ClientUnsafeFeatures, ", ")))
+		fmt.Sprintf("允许的不安全特性，可选值: %s", strings.Join(security.ClientUnsafeFeatures, ", ")))
 
 	//rootCmd.PersistentFlags().StringVarP(&quickStart, "start", "s", "", "LoCyanFrp 快速启动隧道")
 	rootCmd.PersistentFlags().StringVarP(&lcfFrpToken, "token", "u", "", "LoCyanFrp 用户访问令牌")
-	rootCmd.PersistentFlags().Int64SliceVarP(&lcfTunnelIds, "id", "p", []int64{}, "LoCyanFrp 隧道 ID 列表")
+	rootCmd.PersistentFlags().Int64SliceVarP(&lcfTunnelIds, "id", "t", []int64{}, "LoCyanFrp 隧道 ID 列表")
 }
 
 var rootCmd = &cobra.Command{

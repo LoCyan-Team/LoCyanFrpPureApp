@@ -37,9 +37,9 @@ func init() {
 		description string
 		handler     func(*v1.ClientCommonConfig) error
 	}{
-		{"reload", "Hot-Reload frpc configuration", ReloadHandler},
-		{"status", "Overview of all proxies status", StatusHandler},
-		{"stop", "Stop the running frpc", StopHandler},
+		{"reload", "热重载 frpc 配置", ReloadHandler},
+		{"status", "所有代理的状态概览", StatusHandler},
+		{"stop", "停止运行中的 frpc", StopHandler},
 	}
 
 	for _, cmdConfig := range commands {

@@ -72,7 +72,7 @@ func init() {
 func NewProxyCommand(name string, c v1.ProxyConfigurer, clientCfg *v1.ClientCommonConfig) *cobra.Command {
 	return &cobra.Command{
 		Use:   name,
-		Short: fmt.Sprintf("Run frpc with a single %s proxy", name),
+		Short: fmt.Sprintf("以命令行启动 %s 类型的隧道", name),
 		Run: func(cmd *cobra.Command, args []string) {
 			if err := clientCfg.Complete(); err != nil {
 				fmt.Println(err)

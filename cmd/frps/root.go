@@ -41,11 +41,11 @@ var (
 )
 
 func init() {
-	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "config file of frps")
-	rootCmd.PersistentFlags().BoolVarP(&showVersion, "version", "v", false, "version of frps")
-	rootCmd.PersistentFlags().BoolVarP(&strictConfigMode, "strict_config", "", true, "strict config parsing mode, unknown fields will cause errors")
+	rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "c", "", "frp 服务端配置文件")
+	rootCmd.PersistentFlags().BoolVarP(&showVersion, "version", "v", false, "frp 服务端版本信息")
+	rootCmd.PersistentFlags().BoolVarP(&strictConfigMode, "strict_config", "", true, "严格配置解析模式，未知字段会导致错误")
 	rootCmd.PersistentFlags().StringSliceVarP(&allowUnsafe, "allow-unsafe", "", []string{},
-		fmt.Sprintf("allowed unsafe features, one or more of: %s", strings.Join(security.ServerUnsafeFeatures, ", ")))
+		fmt.Sprintf("允许的不安全特性，可选值: %s", strings.Join(security.ServerUnsafeFeatures, ", ")))
 
 	config.RegisterServerConfigFlags(rootCmd, &serverCfg)
 }
