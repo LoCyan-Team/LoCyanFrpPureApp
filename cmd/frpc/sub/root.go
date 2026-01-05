@@ -17,8 +17,6 @@ package sub
 import (
 	"context"
 	"fmt"
-	"github.com/fatedier/frp/pkg/api"
-	"github.com/fatedier/frp/pkg/api/client/tunnel"
 	"io/fs"
 	"os"
 	"os/signal"
@@ -28,6 +26,9 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/fatedier/frp/pkg/api"
+	"github.com/fatedier/frp/pkg/api/client/tunnel"
 
 	"github.com/spf13/cobra"
 
@@ -50,7 +51,6 @@ var (
 	//quickStart       string
 	lcfFrpToken  string
 	lcfTunnelIds []int64
-
 )
 
 func init() {
@@ -76,16 +76,19 @@ var rootCmd = &cobra.Command{
 		}
 		log.Infof("欢迎使用 LoCyanFrp 客户端")
 
+		// 修复点：先初始化 unsafeFeatures，这样下面才能使用
+		unsafeFeatures := security.NewUnsafeFeatures(allowUnsafe)
+
+		// 快速启动逻辑 (使用 token 和 id)
 		if lcfFrpToken != "" && len(lcfTunnelIds) > 0 {
-			err := quickStartClient(lcfFrpToken, lcfTunnelIds)
+			// 现在这里传入 unsafeFeatures 就不会报错了
+			err := quickStartClient(lcfFrpToken, lcfTunnelIds, unsafeFeatures)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
 			return nil
 		}
-
-		unsafeFeatures := security.NewUnsafeFeatures(allowUnsafe)
 
 		// If cfgDir is not empty, run multiple frpc service for each config file in cfgDir.
 		// Note that it's only designed for testing. It's not guaranteed to be stable.
@@ -203,7 +206,7 @@ func startService(
 }
 
 // quickStartClient 一键启动
-func quickStartClient(frpToken string, tunnelIds []int64) error {
+func quickStartClient(frpToken string, tunnelIds []int64, unsafeFeatures *security.UnsafeFeatures) error {
 	as, err := api.NewApiService()
 	if err != nil {
 		log.Warnf("初始化 API 服务失败")
@@ -260,7 +263,9 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 					log.Errorf("Frp 客户端隧道 [%d] 打开配置文件出错: %v", tunnelId, err)
 					return err
 				}
-				defer configFile.Close()
+				defer func(configFile *os.File) {
+					_ = configFile.Close()
+				}(configFile)
 
 				_, err = configFile.WriteString(apiGetConfig.Data.Config)
 				if err != nil {
@@ -272,7 +277,7 @@ func quickStartClient(frpToken string, tunnelIds []int64) error {
 				return
 			}
 
-			err = runClient(cfgPath)
+			err = runClient(cfgPath, unsafeFeatures)
 			if err != nil {
 				log.Errorf("Frp 客户端隧道 [%d] 启动出错: %v", tunnelId, err)
 			}
