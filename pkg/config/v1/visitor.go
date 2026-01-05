@@ -32,8 +32,11 @@ type VisitorTransport struct {
 }
 
 type VisitorBaseConfig struct {
-	Name      string           `json:"name"`
-	Type      string           `json:"type"`
+	Name string `json:"name"`
+	Type string `json:"type"`
+	// Enabled controls whether this visitor is enabled. nil or true means enabled, false means disabled.
+	// This allows individual control over each visitor, complementing the global "start" field.
+	Enabled   *bool            `json:"enabled,omitempty"`
 	Transport VisitorTransport `json:"transport,omitempty"`
 	SecretKey string           `json:"secretKey,omitempty"`
 	// if the server user is not set, it defaults to the current user
@@ -160,6 +163,9 @@ type XTCPVisitorConfig struct {
 	MinRetryInterval  int    `json:"minRetryInterval,omitempty"`
 	FallbackTo        string `json:"fallbackTo,omitempty"`
 	FallbackTimeoutMs int    `json:"fallbackTimeoutMs,omitempty"`
+
+	// NatTraversal configuration for NAT traversal
+	NatTraversal *NatTraversalConfig `json:"natTraversal,omitempty"`
 }
 
 func (c *XTCPVisitorConfig) Complete(g *ClientCommonConfig) {

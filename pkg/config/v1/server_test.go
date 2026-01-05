@@ -24,9 +24,18 @@ import (
 func TestServerConfigComplete(t *testing.T) {
 	require := require.New(t)
 	c := &ServerConfig{}
-	c.Complete()
+	err := c.Complete()
+	require.NoError(err)
 
 	require.EqualValues("token", c.Auth.Method)
 	require.Equal(true, lo.FromPtr(c.Transport.TCPMux))
 	require.Equal(true, lo.FromPtr(c.DetailedErrorsToClient))
+}
+
+func TestAuthServerConfig_Complete(t *testing.T) {
+	require := require.New(t)
+	cfg := &AuthServerConfig{}
+	err := cfg.Complete()
+	require.NoError(err)
+	require.EqualValues("token", cfg.Method)
 }

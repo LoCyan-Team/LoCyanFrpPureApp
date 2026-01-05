@@ -21,9 +21,9 @@ type Custom struct {
 	Mod   string
 }
 
-var version = "LoCyanFrp-0.62.1"
+var version = "LoCyanFrp-0.66.0"
 var custom = Custom{
-	Build: "2",
+	Build: "1",
 }
 
 func Full() string {

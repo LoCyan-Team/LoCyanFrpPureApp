@@ -102,7 +102,7 @@ func (pxy *UDPProxy) InWorkConn(conn net.Conn, _ *msg.StartWorkConn) {
 		})
 	}
 	if pxy.cfg.Transport.UseEncryption {
-		rwc, err = libio.WithEncryption(rwc, []byte(pxy.clientCfg.Auth.Token))
+		rwc, err = libio.WithEncryption(rwc, pxy.encryptionKey)
 		if err != nil {
 			conn.Close()
 			xl.Errorf("create encryption stream error: %v", err)
@@ -171,5 +171,7 @@ func (pxy *UDPProxy) InWorkConn(conn net.Conn, _ *msg.StartWorkConn) {
 	go workConnSenderFn(pxy.workConn, pxy.sendCh)
 	go workConnReaderFn(pxy.workConn, pxy.readCh)
 	go heartbeatFn(pxy.sendCh)
-	udp.Forwarder(pxy.localAddr, pxy.readCh, pxy.sendCh, int(pxy.clientCfg.UDPPacketSize))
+
+	// Call Forwarder with proxy protocol version (empty string means no proxy protocol)
+	udp.Forwarder(pxy.localAddr, pxy.readCh, pxy.sendCh, int(pxy.clientCfg.UDPPacketSize), pxy.cfg.Transport.ProxyProtocolVersion)
 }

@@ -135,11 +135,11 @@ type CloseNotifyConn struct {
 	// 1 mean closed
 	closeFlag int32
 
-	closeFn func()
+	closeFn func(error)
 }
 
-// WrapCloseNotifyConn closeFn will be only called once
-func WrapCloseNotifyConn(c net.Conn, closeFn func()) net.Conn {
+// WrapCloseNotifyConn closeFn will be only called once with the error (nil if Close() was called, non-nil if CloseWithError() was called)
+func WrapCloseNotifyConn(c net.Conn, closeFn func(error)) *CloseNotifyConn {
 	return &CloseNotifyConn{
 		Conn:    c,
 		closeFn: closeFn,
@@ -149,12 +149,25 @@ func WrapCloseNotifyConn(c net.Conn, closeFn func()) net.Conn {
 func (cc *CloseNotifyConn) Close() (err error) {
 	pflag := atomic.SwapInt32(&cc.closeFlag, 1)
 	if pflag == 0 {
-		err = cc.Close()
+		err = cc.Conn.Close()
 		if cc.closeFn != nil {
-			cc.closeFn()
+			cc.closeFn(nil)
 		}
 	}
 	return
+}
+
+// CloseWithError closes the connection and passes the error to the close callback.
+func (cc *CloseNotifyConn) CloseWithError(err error) error {
+	pflag := atomic.SwapInt32(&cc.closeFlag, 1)
+	if pflag == 0 {
+		closeErr := cc.Conn.Close()
+		if cc.closeFn != nil {
+			cc.closeFn(err)
+		}
+		return closeErr
+	}
+	return nil
 }
 
 type StatsConn struct {
@@ -223,7 +236,7 @@ func (conn *wrapQuicStream) RemoteAddr() net.Addr {
 }
 
 func (conn *wrapQuicStream) Close() error {
-	conn.Stream.CancelRead(0)
+	conn.CancelRead(0)
 	return conn.Stream.Close()
 }
 

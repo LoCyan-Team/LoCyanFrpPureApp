@@ -31,6 +31,7 @@ import (
 	"github.com/fatedier/frp/pkg/auth"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/fatedier/frp/pkg/msg"
+	"github.com/fatedier/frp/pkg/policy/security"
 	httppkg "github.com/fatedier/frp/pkg/util/http"
 	"github.com/fatedier/frp/pkg/util/log"
 	netpkg "github.com/fatedier/frp/pkg/util/net"
@@ -64,6 +65,8 @@ type ServiceOptions struct {
 	ProxyCfgs   []v1.ProxyConfigurer
 	VisitorCfgs []v1.VisitorConfigurer
 
+	UnsafeFeatures *security.UnsafeFeatures
+
 	// ConfigFilePath is the path to the configuration file used to initialize.
 	// If it is empty, it means that the configuration file is not used for initialization.
 	// It may be initialized using command line parameters or called directly.
@@ -88,13 +91,16 @@ type ServiceOptions struct {
 }
 
 // setServiceOptionsDefault sets the default values for ServiceOptions.
-func setServiceOptionsDefault(options *ServiceOptions) {
+func setServiceOptionsDefault(options *ServiceOptions) error {
 	if options.Common != nil {
-		options.Common.Complete()
+		if err := options.Common.Complete(); err != nil {
+			return err
+		}
 	}
 	if options.ConnectorCreator == nil {
 		options.ConnectorCreator = NewConnector
 	}
+	return nil
 }
 
 // Service is the client service that connects to frps and provides proxy services.
@@ -105,8 +111,8 @@ type Service struct {
 	// Uniq id got from frps, it will be attached to loginMsg.
 	runID string
 
-	// Sets authentication based on selected method
-	authSetter auth.Setter
+	// Auth runtime and encryption materials
+	auth *auth.ClientAuth
 
 	// web server for admin UI and apis
 	webServer *httppkg.Server
@@ -118,6 +124,8 @@ type Service struct {
 	proxyCfgs   []v1.ProxyConfigurer
 	visitorCfgs []v1.VisitorConfigurer
 	clientSpec  *msg.ClientSpec
+
+	unsafeFeatures *security.UnsafeFeatures
 
 	// The configuration file used to initialize this client, or an empty
 	// string if no configuration file was used.
@@ -134,7 +142,9 @@ type Service struct {
 }
 
 func NewService(options ServiceOptions) (*Service, error) {
-	setServiceOptionsDefault(&options)
+	if err := setServiceOptionsDefault(&options); err != nil {
+		return nil, err
+	}
 
 	var webServer *httppkg.Server
 	if options.Common.WebServer.Port > 0 {
@@ -144,12 +154,19 @@ func NewService(options ServiceOptions) (*Service, error) {
 		}
 		webServer = ws
 	}
+
+	authRuntime, err := auth.BuildClientAuth(&options.Common.Auth)
+	if err != nil {
+		return nil, err
+	}
+
 	s := &Service{
 		ctx:              context.Background(),
-		authSetter:       auth.NewAuthSetter(options.Common.Auth),
+		auth:             authRuntime,
 		webServer:        webServer,
 		common:           options.Common,
 		configFilePath:   options.ConfigFilePath,
+		unsafeFeatures:   options.UnsafeFeatures,
 		proxyCfgs:        options.ProxyCfgs,
 		visitorCfgs:      options.VisitorCfgs,
 		clientSpec:       options.ClientSpec,
@@ -279,7 +296,7 @@ func (svr *Service) login() (conn net.Conn, connector Connector, err error) {
 	}
 
 	// Add auth
-	if err = svr.authSetter.SetLogin(loginMsg); err != nil {
+	if err = svr.auth.Setter.SetLogin(loginMsg); err != nil {
 		return
 	}
 
@@ -325,16 +342,15 @@ func (svr *Service) loopLoginUntilSuccess(maxInterval time.Duration, firstLoginE
 		proxyCfgs := svr.proxyCfgs
 		visitorCfgs := svr.visitorCfgs
 		svr.cfgMu.RUnlock()
-		connEncrypted := true
-		if svr.clientSpec != nil && svr.clientSpec.Type == "ssh-tunnel" {
-			connEncrypted = false
-		}
+
+		connEncrypted := svr.clientSpec == nil || svr.clientSpec.Type != "ssh-tunnel"
+
 		sessionCtx := &SessionContext{
 			Common:         svr.common,
 			RunID:          svr.runID,
 			Conn:           conn,
 			ConnEncrypted:  connEncrypted,
-			AuthSetter:     svr.authSetter,
+			Auth:           svr.auth,
 			Connector:      connector,
 			VnetController: svr.vnetController,
 		}
@@ -398,6 +414,10 @@ func (svr *Service) stop() {
 	if svr.ctl != nil {
 		svr.ctl.GracefulClose(svr.gracefulShutdownDuration)
 		svr.ctl = nil
+	}
+	if svr.webServer != nil {
+		svr.webServer.Close()
+		svr.webServer = nil
 	}
 }
 

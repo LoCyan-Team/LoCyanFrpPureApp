@@ -40,3 +40,6 @@ client.key
 # Cache
 *.swp
 .lcf-cache
+
+# AI
+CLAUDE.md

@@ -115,6 +115,8 @@ type Control struct {
 
 	// verifies authentication based on selected method
 	authVerifier auth.Verifier
+	// key used for connection encryption
+	encryptionKey []byte
 
 	// other components can use this to communicate with client
 	msgTransporter transport.MessageTransporter
@@ -169,6 +171,7 @@ func NewControl(
 	pxyManager *proxy.Manager,
 	pluginManager *plugin.Manager,
 	authVerifier auth.Verifier,
+	encryptionKey []byte,
 	ctlConn net.Conn,
 	ctlConnEncrypted bool,
 	loginMsg *msg.Login,
@@ -185,6 +188,7 @@ func NewControl(
 		pxyManager:    pxyManager,
 		pluginManager: pluginManager,
 		authVerifier:  authVerifier,
+		encryptionKey: encryptionKey,
 		conn:          ctlConn,
 		loginMsg:      loginMsg,
 		workConnCh:    make(chan net.Conn, poolCount+10),
@@ -202,7 +206,7 @@ func NewControl(
 	ctl.lastPing.Store(time.Now())
 
 	if ctlConnEncrypted {
-		cryptoRW, err := netpkg.NewCryptoReadWriter(ctl.conn, []byte(ctl.serverCfg.Auth.Token))
+		cryptoRW, err := netpkg.NewCryptoReadWriter(ctl.conn, ctl.encryptionKey)
 		if err != nil {
 			return nil, err
 		}
@@ -211,7 +215,7 @@ func NewControl(
 		ctl.msgDispatcher = msg.NewDispatcher(ctl.conn)
 	}
 	ctl.registerMsgHandlers()
-	ctl.msgTransporter = transport.NewMessageTransporter(ctl.msgDispatcher.SendChannel())
+	ctl.msgTransporter = transport.NewMessageTransporter(ctl.msgDispatcher)
 	return ctl, nil
 }
 
@@ -234,10 +238,7 @@ func (ctl *Control) Start() {
 }
 
 func (ctl *Control) Close() error {
-	err := ctl.conn.Close()
-	if err != nil {
-		return err
-	}
+	ctl.conn.Close()
 	return nil
 }
 
@@ -245,10 +246,7 @@ func (ctl *Control) Replaced(newCtl *Control) {
 	xl := ctl.xl
 	xl.Infof("replaced by client [%s]", newCtl.runID)
 	ctl.runID = ""
-	err := ctl.conn.Close()
-	if err != nil {
-		return
-	}
+	ctl.conn.Close()
 }
 
 func (ctl *Control) RegisterWorkConn(conn net.Conn) error {
@@ -327,10 +325,7 @@ func (ctl *Control) heartbeatWorker() {
 	go wait.Until(func() {
 		if time.Since(ctl.lastPing.Load().(time.Time)) > time.Duration(ctl.serverCfg.Transport.HeartbeatTimeout)*time.Second {
 			xl.Warnf("heartbeat timeout")
-			err := ctl.conn.Close()
-			if err != nil {
-				return
-			}
+			ctl.conn.Close()
 			return
 		}
 	}, time.Second, ctl.doneCh)
@@ -348,20 +343,14 @@ func (ctl *Control) worker() {
 	go ctl.msgDispatcher.Run()
 
 	<-ctl.msgDispatcher.Done()
-	err := ctl.conn.Close()
-	if err != nil {
-		return
-	}
+	ctl.conn.Close()
 
 	ctl.mu.Lock()
 	defer ctl.mu.Unlock()
 
 	close(ctl.workConnCh)
 	for workConn := range ctl.workConnCh {
-		err := workConn.Close()
-		if err != nil {
-			return
-		}
+		workConn.Close()
 	}
 
 	for _, pxy := range ctl.proxies {
@@ -595,6 +584,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		GetWorkConnFn:      ctl.GetWorkConn,
 		Configurer:         pxyConf,
 		ServerCfg:          ctl.serverCfg,
+		EncryptionKey:      ctl.encryptionKey,
 	}, lr, lw)
 	if err != nil {
 		return remoteAddr, err

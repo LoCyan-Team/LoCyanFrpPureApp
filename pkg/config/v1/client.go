@@ -77,18 +77,21 @@ type ClientCommonConfig struct {
 	IncludeConfigFiles []string `json:"includes,omitempty"`
 }
 
-func (c *ClientCommonConfig) Complete() {
+func (c *ClientCommonConfig) Complete() error {
 	c.ServerAddr = util.EmptyOr(c.ServerAddr, "0.0.0.0")
 	c.ServerPort = util.EmptyOr(c.ServerPort, 7000)
 	c.LoginFailExit = util.EmptyOr(c.LoginFailExit, lo.ToPtr(true))
 	c.NatHoleSTUNServer = util.EmptyOr(c.NatHoleSTUNServer, "stun.easyvoip.com:3478")
 
-	c.Auth.Complete()
+	if err := c.Auth.Complete(); err != nil {
+		return err
+	}
 	c.Log.Complete()
 	c.Transport.Complete()
 	c.WebServer.Complete()
 
 	c.UDPPacketSize = util.EmptyOr(c.UDPPacketSize, 1500)
+	return nil
 }
 
 type ClientTransportConfig struct {
@@ -184,12 +187,16 @@ type AuthClientConfig struct {
 	// Token specifies the authorization token used to create keys to be sent
 	// to the server. The server must have a matching token for authorization
 	// to succeed.  By default, this value is "".
-	Token string               `json:"token,omitempty"`
-	OIDC  AuthOIDCClientConfig `json:"oidc,omitempty"`
+	Token string `json:"token,omitempty"`
+	// TokenSource specifies a dynamic source for the authorization token.
+	// This is mutually exclusive with Token field.
+	TokenSource *ValueSource         `json:"tokenSource,omitempty"`
+	OIDC        AuthOIDCClientConfig `json:"oidc,omitempty"`
 }
 
-func (c *AuthClientConfig) Complete() {
+func (c *AuthClientConfig) Complete() error {
 	c.Method = util.EmptyOr(c.Method, "token")
+	return nil
 }
 
 type AuthOIDCClientConfig struct {
@@ -208,6 +215,21 @@ type AuthOIDCClientConfig struct {
 	// AdditionalEndpointParams specifies additional parameters to be sent
 	// this field will be transfer to map[string][]string in OIDC token generator.
 	AdditionalEndpointParams map[string]string `json:"additionalEndpointParams,omitempty"`
+
+	// TrustedCaFile specifies the path to a custom CA certificate file
+	// for verifying the OIDC token endpoint's TLS certificate.
+	TrustedCaFile string `json:"trustedCaFile,omitempty"`
+	// InsecureSkipVerify disables TLS certificate verification for the
+	// OIDC token endpoint. Only use this for debugging, not recommended for production.
+	InsecureSkipVerify bool `json:"insecureSkipVerify,omitempty"`
+	// ProxyURL specifies a proxy to use when connecting to the OIDC token endpoint.
+	// Supports http, https, socks5, and socks5h proxy protocols.
+	// If empty, no proxy is used for OIDC connections.
+	ProxyURL string `json:"proxyURL,omitempty"`
+
+	// TokenSource specifies a custom dynamic source for the authorization token.
+	// This is mutually exclusive with every other field of this structure.
+	TokenSource *ValueSource `json:"tokenSource,omitempty"`
 }
 
 type VirtualNetConfig struct {

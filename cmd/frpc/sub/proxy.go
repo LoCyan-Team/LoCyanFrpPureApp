@@ -24,6 +24,7 @@ import (
 	"github.com/fatedier/frp/pkg/config"
 	v1 "github.com/fatedier/frp/pkg/config/v1"
 	"github.com/fatedier/frp/pkg/config/v1/validation"
+	"github.com/fatedier/frp/pkg/policy/security"
 )
 
 var proxyTypes = []v1.ProxyType{
@@ -73,8 +74,14 @@ func NewProxyCommand(name string, c v1.ProxyConfigurer, clientCfg *v1.ClientComm
 		Use:   name,
 		Short: fmt.Sprintf("Run frpc with a single %s proxy", name),
 		Run: func(cmd *cobra.Command, args []string) {
-			clientCfg.Complete()
-			if _, err := validation.ValidateClientCommonConfig(clientCfg); err != nil {
+			if err := clientCfg.Complete(); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
+			unsafeFeatures := security.NewUnsafeFeatures(allowUnsafe)
+			validator := validation.NewConfigValidator(unsafeFeatures)
+			if _, err := validator.ValidateClientCommonConfig(clientCfg); err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
@@ -85,7 +92,7 @@ func NewProxyCommand(name string, c v1.ProxyConfigurer, clientCfg *v1.ClientComm
 				fmt.Println(err)
 				os.Exit(1)
 			}
-			err := startService(clientCfg, []v1.ProxyConfigurer{c}, nil, "")
+			err := startService(clientCfg, []v1.ProxyConfigurer{c}, nil, unsafeFeatures, "")
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -99,8 +106,13 @@ func NewVisitorCommand(name string, c v1.VisitorConfigurer, clientCfg *v1.Client
 		Use:   "visitor",
 		Short: fmt.Sprintf("Run frpc with a single %s visitor", name),
 		Run: func(cmd *cobra.Command, args []string) {
-			clientCfg.Complete()
-			if _, err := validation.ValidateClientCommonConfig(clientCfg); err != nil {
+			if err := clientCfg.Complete(); err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+			unsafeFeatures := security.NewUnsafeFeatures(allowUnsafe)
+			validator := validation.NewConfigValidator(unsafeFeatures)
+			if _, err := validator.ValidateClientCommonConfig(clientCfg); err != nil {
 				fmt.Println(err)
 				os.Exit(1)
 			}
@@ -111,7 +123,7 @@ func NewVisitorCommand(name string, c v1.VisitorConfigurer, clientCfg *v1.Client
 				fmt.Println(err)
 				os.Exit(1)
 			}
-			err := startService(clientCfg, nil, []v1.VisitorConfigurer{c}, "")
+			err := startService(clientCfg, nil, []v1.VisitorConfigurer{c}, unsafeFeatures, "")
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
