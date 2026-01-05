@@ -18,7 +18,6 @@ import "fmt"
 
 type Custom struct {
 	Build string
-	Mod   string
 }
 
 var version = "LoCyanFrp-0.66.0"
@@ -36,8 +35,4 @@ func Version() string {
 
 func Build() string {
 	return custom.Build
-}
-
-func Mod() string {
-	return custom.Mod
 }
