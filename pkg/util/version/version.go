@@ -22,7 +22,7 @@ type Custom struct {
 
 var version = "LoCyanFrp-0.66.0"
 var custom = Custom{
-	Build: "1",
+	Build: "2",
 }
 
 func Full() string {
