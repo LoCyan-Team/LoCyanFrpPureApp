@@ -7,12 +7,12 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'Overview',
+      name: '概览',
       component: Overview,
     },
     {
       path: '/configure',
-      name: 'ClientConfigure',
+      name: '客户端配置',
       component: ClientConfigure,
     },
   ],

@@ -164,7 +164,7 @@ func RegisterClientCommonConfigFlags(cmd *cobra.Command, c *v1.ClientCommonConfi
 		cmd.PersistentFlags().BoolVarP(&c.Log.DisablePrintColor, "disable_log_color", "", false, "禁用控制台日志颜色")
 		cmd.PersistentFlags().StringVarP(&c.Transport.TLS.ServerName, "tls_server_name", "", "", "指定 TLS 证书的自定义服务器名称")
 		cmd.PersistentFlags().StringVarP(&c.DNSServer, "dns_server", "", "", "指定 DNS 服务器以替代系统默认值")
-		c.Transport.TLS.Enable = cmd.PersistentFlags().BoolP("tls_enable", "", true, "启用 frpc TLS")
+		c.Transport.TLS.Enable = cmd.PersistentFlags().BoolP("tls_enable", "", true, "启用 TLS")
 	}
 	cmd.PersistentFlags().StringVarP(&c.User, "user", "", "", "用户")
 	cmd.PersistentFlags().StringVarP(&c.Auth.Token, "token", "", "", "认证 Token")
