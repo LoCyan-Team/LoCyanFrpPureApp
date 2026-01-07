@@ -50,6 +50,8 @@
 </template>
 
 <script setup lang="ts">
+import "../assets/css/scrollbar.css"
+
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useDark, useToggle } from '@vueuse/core'
