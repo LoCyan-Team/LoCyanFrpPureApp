@@ -131,10 +131,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.status-container {
-  padding: 20px;
-}
-
 .card-header {
   display: flex;
   justify-content: space-between;

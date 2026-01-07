@@ -28,6 +28,15 @@
         </div>
       </template>
 
+      <div class="config-alerts">
+        <el-alert
+            title="警告：修改配置并保存后，Frp 客户端将立即执行热重载。"
+            type="warning"
+            :closable="false"
+            show-icon
+        />
+      </div>
+
       <div class="editor-wrapper">
         <el-input
           v-model="textarea"
@@ -36,15 +45,6 @@
           placeholder="请输入配置文件内容"
           spellcheck="false"
           class="custom-textarea"
-        />
-      </div>
-
-      <div class="config-footer">
-        <el-alert
-          title="警告：修改配置并保存后，Frp 客户端将立即执行热重载。"
-          type="warning"
-          :closable="false"
-          show-icon
         />
       </div>
     </el-card>
@@ -105,9 +105,6 @@ onMounted(fetchData)
 </script>
 
 <style scoped>
-.config-container {
-  padding: 20px;
-}
 .card-header {
   display: flex;
   justify-content: space-between;
@@ -120,7 +117,6 @@ onMounted(fetchData)
 
 /* 编辑器外层容器 */
 .editor-wrapper {
-  margin-bottom: 20px;
   border-radius: var(--el-border-radius-base);
   /* 这里的边框也会随主题变色 */
   border: 1px solid var(--el-border-color-lighter);
@@ -157,7 +153,7 @@ onMounted(fetchData)
   background-color: var(--el-fill-color-light) !important;
 }
 
-.config-footer {
-  margin-top: 10px;
+.config-alerts {
+  margin-bottom: 10px;
 }
 </style>
