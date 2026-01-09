@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674
 	github.com/hashicorp/yamux v0.1.2
-	github.com/onsi/ginkgo/v2 v2.27.3
+	github.com/onsi/ginkgo/v2 v2.27.4
 	github.com/onsi/gomega v1.38.3
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/pion/stun/v2 v2.0.0
