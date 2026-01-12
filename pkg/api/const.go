@@ -14,6 +14,6 @@ var UserAgents = struct {
 	Client string
 	Server string
 }{
-	Client: fmt.Sprintf("LoCyanFrp-Client/3 (Frp Client; %s)", version.Full()),
-	Server: fmt.Sprintf("LoCyanFrp-Server/3 (Frp Server; %s)", version.Full()),
+	Client: fmt.Sprintf("LoCyanFrp/%s (Frp Client; %s)", version.ApiService(), version.Full()),
+	Server: fmt.Sprintf("LoCyanFrp/%s (Frp Server; %s)", version.ApiService(), version.Full()),
 }
