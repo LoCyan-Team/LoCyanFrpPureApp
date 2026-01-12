@@ -27,7 +27,7 @@ import (
 
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/api/server/tunnel"
-	api2 "github.com/fatedier/frp/pkg/api/type"
+	apitype "github.com/fatedier/frp/pkg/api/type"
 	"github.com/fatedier/frp/pkg/database"
 	"github.com/fatedier/frp/pkg/util/util"
 
@@ -529,7 +529,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		}
 
 		var rsVerifyTunnel *tunnel.PostTunnelResponse
-		rsVerifyTunnel, err = as.Server.Tunnel.PostTunnel(api2.ServerConfig{
+		rsVerifyTunnel, err = as.Server.Tunnel.PostTunnel(apitype.ServerConfig{
 			NodeId: ctl.serverCfg.Node.Id,
 			ApiKey: ctl.serverCfg.Node.ApiKey,
 		}, verifyTunnelParams)
@@ -547,7 +547,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 
 		var rsSubmitRunId *tunnel.PostRunIdResponse
 		rsSubmitRunId, err = as.Server.Tunnel.PutRunId(
-			api2.ServerConfig{
+			apitype.ServerConfig{
 				NodeId: ctl.serverCfg.Node.Id,
 				ApiKey: ctl.serverCfg.Node.ApiKey,
 			},
