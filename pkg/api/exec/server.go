@@ -11,7 +11,8 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/fatedier/frp/pkg/api"
+	_const "github.com/fatedier/frp/pkg/api/const"
+	"github.com/fatedier/frp/pkg/api/type"
 	"github.com/fatedier/frp/pkg/util/log"
 )
 
@@ -21,7 +22,7 @@ func ServerExecute(ctx context.Context, path string, method string, cfg api.Serv
 		resp    *http.Response
 		err     error
 	)
-	for _, baseURL := range api.Endpoints {
+	for _, baseURL := range _const.Endpoints {
 		fullURL, err = url.JoinPath(baseURL, path)
 		if err != nil {
 			continue
@@ -32,7 +33,7 @@ func ServerExecute(ctx context.Context, path string, method string, cfg api.Serv
 			return nil, err
 		}
 
-		req.Header.Set("User-Agent", api.UserAgents.Server)
+		req.Header.Set("User-Agent", _const.UserAgents.Server)
 		req.Header.Set("X-Node-Id", strconv.FormatInt(cfg.NodeId, 10))
 		req.Header.Set("X-Api-Key", cfg.ApiKey)
 

@@ -27,6 +27,7 @@ import (
 
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/api/server/tunnel"
+	api2 "github.com/fatedier/frp/pkg/api/type"
 	"github.com/fatedier/frp/pkg/database"
 	"github.com/fatedier/frp/pkg/util/util"
 
@@ -479,7 +480,6 @@ func (ctl *Control) handleCloseProxy(m msg.Message) {
 }
 
 func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err error) {
-	xl := ctl.xl
 	var pxyConf v1.ProxyConfigurer
 	// Load configures from NewProxy message and validate.
 	pxyConf, err = config.NewProxyConfigurerFromMsg(pxyMsg, ctl.serverCfg)
@@ -497,10 +497,10 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 	}
 
 	if ctl.serverCfg.EnableApi {
-		as, err := api.NewApiService()
+		var as *api.V3Service
+		as, err = api.NewApiService()
 		if err != nil {
-			xl.Errorf("init API service falied: %v", err)
-			return
+			return "", errors.New(fmt.Sprintf("create api service error: %v", err))
 		}
 
 		var tunnelName string
@@ -529,13 +529,12 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		}
 
 		var rsVerifyTunnel *tunnel.PostTunnelResponse
-		rsVerifyTunnel, err = as.Server.Tunnel.PostTunnel(api.ServerConfig{
+		rsVerifyTunnel, err = as.Server.Tunnel.PostTunnel(api2.ServerConfig{
 			NodeId: ctl.serverCfg.Node.Id,
 			ApiKey: ctl.serverCfg.Node.ApiKey,
 		}, verifyTunnelParams)
 		if err != nil {
-			xl.Errorf("verify tunnel failed: %v", err)
-			return
+			return "", errors.New(fmt.Sprintf("post tunnel error: %v", err))
 		}
 		if rsVerifyTunnel.Status != 200 {
 			return "", errors.New(fmt.Sprintf(
@@ -548,7 +547,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 
 		var rsSubmitRunId *tunnel.PostRunIdResponse
 		rsSubmitRunId, err = as.Server.Tunnel.PutRunId(
-			api.ServerConfig{
+			api2.ServerConfig{
 				NodeId: ctl.serverCfg.Node.Id,
 				ApiKey: ctl.serverCfg.Node.ApiKey,
 			},

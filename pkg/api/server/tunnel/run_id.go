@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/fatedier/frp/pkg/api"
 	_api "github.com/fatedier/frp/pkg/api/exec"
+	"github.com/fatedier/frp/pkg/api/type"
 )
 
 type PostRunIdParams struct {

@@ -28,6 +28,7 @@ import (
 
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/api/server/user"
+	api2 "github.com/fatedier/frp/pkg/api/type"
 	"github.com/fatedier/frp/pkg/database"
 	"github.com/fatedier/frp/pkg/util/util"
 	"github.com/quic-go/quic-go"
@@ -632,7 +633,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 
 		var rsVerifyToken *user.PostTokenResponse
 		rsVerifyToken, err = as.Server.User.PostToken(
-			api.ServerConfig{
+			api2.ServerConfig{
 				NodeId: svr.cfg.Node.Id,
 				ApiKey: svr.cfg.Node.ApiKey,
 			},
@@ -652,7 +653,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 		}
 
 		rsGetLimit, err = as.Server.User.GetSpeedLimit(
-			api.ServerConfig{
+			api2.ServerConfig{
 				NodeId: svr.cfg.Node.Id,
 				ApiKey: svr.cfg.Node.ApiKey,
 			},

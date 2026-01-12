@@ -167,8 +167,8 @@ func Convert_ServerCommonConf_To_v1(conf *ServerCommonConf) *v1.ServerConfig {
 	out.AllowPorts, _ = types.NewPortsRangeSliceFromString(conf.AllowPortsStr)
 
 	out.EnableApi = conf.EnableApi
-	out.NodeApiKey = conf.NodeApiKey
-	out.NodeId = conf.NodeId
+	out.Node.ApiKey = conf.NodeApiKey
+	out.Node.Id = conf.NodeId
 	return out
 }
 

@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/fatedier/frp/pkg/api"
+	"github.com/fatedier/frp/pkg/api/const"
 	"github.com/fatedier/frp/pkg/util/log"
 )
 
