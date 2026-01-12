@@ -97,9 +97,8 @@ type ServerConfig struct {
 
 	HTTPPlugins []HTTPPluginOptions `json:"httpPlugins,omitempty"`
 
-	EnableApi  bool   `json:"enableApi,omitempty"`
-	NodeId     int64  `json:"nodeId,omitempty"`
-	NodeApiKey string `json:"nodeApiKey,omitempty"`
+	EnableApi bool       `json:"enableApi,omitempty"`
+	Node      NodeConfig `json:"node,omitempty"`
 }
 
 func (c *ServerConfig) Complete() error {
@@ -217,4 +216,9 @@ type SSHTunnelGateway struct {
 
 func (c *SSHTunnelGateway) Complete() {
 	c.AutoGenPrivateKeyPath = util.EmptyOr(c.AutoGenPrivateKeyPath, "./.autogen_ssh_key")
+}
+
+type NodeConfig struct {
+	Id     int64  `json:"id,omitempty"`
+	ApiKey string `json:"apiKey,omitempty"`
 }

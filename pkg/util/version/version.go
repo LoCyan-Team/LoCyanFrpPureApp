@@ -21,8 +21,9 @@ type Custom struct {
 }
 
 var version = "LoCyanFrp-0.66.0"
+var apiServiceVersion = "3"
 var custom = Custom{
-	Build: "2",
+	Build: "3",
 }
 
 func Full() string {
@@ -35,4 +36,8 @@ func Version() string {
 
 func Build() string {
 	return custom.Build
+}
+
+func ApiService() string {
+	return apiServiceVersion
 }

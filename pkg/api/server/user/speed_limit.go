@@ -3,10 +3,13 @@ package user
 import (
 	"context"
 	"encoding/json"
-	_api "github.com/fatedier/frp/pkg/api/exec"
+
 	"io"
 	"net/http"
 	"time"
+
+	_api "github.com/fatedier/frp/pkg/api/exec"
+	"github.com/fatedier/frp/pkg/api/type"
 )
 
 type GetSpeedLimitParams struct {
@@ -23,11 +26,11 @@ type GetSpeedLimitResponse struct {
 	} `json:"data"`
 }
 
-func (s Service) GetSpeedLimit(apiKey string, params GetSpeedLimitParams) (response *GetSpeedLimitResponse, err error) {
+func (s Service) GetSpeedLimit(serverConfig api.ServerConfig, params GetSpeedLimitParams) (response *GetSpeedLimitResponse, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
-	rs, err := _api.Execute(ctx, "/server/user/speed-limit", http.MethodGet, apiKey, params, nil)
+	rs, err := _api.ServerExecute(ctx, "/server/user/speed-limit", http.MethodGet, serverConfig, params, nil)
 	if err != nil {
 		return nil, err
 	}
