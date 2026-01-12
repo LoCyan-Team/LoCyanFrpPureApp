@@ -29,6 +29,7 @@ import (
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/api/server/user"
 	"github.com/fatedier/frp/pkg/database"
+	"github.com/fatedier/frp/pkg/util/util"
 	"github.com/quic-go/quic-go"
 
 	"github.com/fatedier/golib/crypto"
@@ -48,7 +49,6 @@ import (
 	"github.com/fatedier/frp/pkg/util/log"
 	netpkg "github.com/fatedier/frp/pkg/util/net"
 	"github.com/fatedier/frp/pkg/util/tcpmux"
-	"github.com/fatedier/frp/pkg/util/util"
 	"github.com/fatedier/frp/pkg/util/version"
 	"github.com/fatedier/frp/pkg/util/vhost"
 	"github.com/fatedier/frp/pkg/util/xlog"
@@ -595,7 +595,7 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 		if err != nil {
 			return err
 		}
-		loginMsg.RunID = fmt.Sprintf("%d.%s", svr.cfg.NodeId, generated)
+		loginMsg.RunID = fmt.Sprintf("%d.%s", svr.cfg.Node.Id, generated)
 	} else {
 		isClosed, err := svr.closedProxyManager.IsClosed(loginMsg.RunID)
 		if err != nil {
@@ -631,10 +631,15 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 		}
 
 		var rsVerifyToken *user.PostTokenResponse
-		rsVerifyToken, err = as.Server.User.PostToken(svr.cfg.NodeApiKey, user.PostTokenParams{
-			NodeId:   svr.cfg.NodeId,
-			FrpToken: loginMsg.User,
-		})
+		rsVerifyToken, err = as.Server.User.PostToken(
+			api.ServerConfig{
+				NodeId: svr.cfg.Node.Id,
+				ApiKey: svr.cfg.Node.ApiKey,
+			},
+			user.PostTokenParams{
+				FrpToken: loginMsg.User,
+			},
+		)
 		if err != nil {
 			return err
 		}
@@ -646,10 +651,15 @@ func (svr *Service) RegisterControl(ctlConn net.Conn, loginMsg *msg.Login, inter
 			))
 		}
 
-		rsGetLimit, err = as.Server.User.GetSpeedLimit(svr.cfg.NodeApiKey, user.GetSpeedLimitParams{
-			NodeId:   svr.cfg.NodeId,
-			FrpToken: loginMsg.User,
-		})
+		rsGetLimit, err = as.Server.User.GetSpeedLimit(
+			api.ServerConfig{
+				NodeId: svr.cfg.Node.Id,
+				ApiKey: svr.cfg.Node.ApiKey,
+			},
+			user.GetSpeedLimitParams{
+				FrpToken: loginMsg.User,
+			},
+		)
 		if err != nil {
 			return err
 		}

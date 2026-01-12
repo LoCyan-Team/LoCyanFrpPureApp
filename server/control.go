@@ -28,6 +28,7 @@ import (
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/api/server/tunnel"
 	"github.com/fatedier/frp/pkg/database"
+	"github.com/fatedier/frp/pkg/util/util"
 
 	"github.com/samber/lo"
 	"golang.org/x/time/rate"
@@ -40,7 +41,6 @@ import (
 	plugin "github.com/fatedier/frp/pkg/plugin/server"
 	"github.com/fatedier/frp/pkg/transport"
 	netpkg "github.com/fatedier/frp/pkg/util/net"
-	"github.com/fatedier/frp/pkg/util/util"
 	"github.com/fatedier/frp/pkg/util/version"
 	"github.com/fatedier/frp/pkg/util/wait"
 	"github.com/fatedier/frp/pkg/util/xlog"
@@ -497,8 +497,7 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 	}
 
 	if ctl.serverCfg.EnableApi {
-		var as *api.V3Service
-		as, err = api.NewApiService()
+		as, err := api.NewApiService()
 		if err != nil {
 			xl.Errorf("init API service falied: %v", err)
 			return
@@ -512,7 +511,6 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		}
 
 		verifyTunnelParams := tunnel.PostTunnelParams{
-			NodeId:         ctl.serverCfg.NodeId,
 			FrpToken:       ctl.loginMsg.User,
 			TunnelName:     tunnelName,
 			TunnelType:     pxyMsg.ProxyType,
@@ -531,7 +529,10 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		}
 
 		var rsVerifyTunnel *tunnel.PostTunnelResponse
-		rsVerifyTunnel, err = as.Server.Tunnel.PostTunnel(ctl.serverCfg.NodeApiKey, verifyTunnelParams)
+		rsVerifyTunnel, err = as.Server.Tunnel.PostTunnel(api.ServerConfig{
+			NodeId: ctl.serverCfg.Node.Id,
+			ApiKey: ctl.serverCfg.Node.ApiKey,
+		}, verifyTunnelParams)
 		if err != nil {
 			xl.Errorf("verify tunnel failed: %v", err)
 			return
@@ -546,11 +547,16 @@ func (ctl *Control) RegisterProxy(pxyMsg *msg.NewProxy) (remoteAddr string, err 
 		}
 
 		var rsSubmitRunId *tunnel.PostRunIdResponse
-		rsSubmitRunId, err = as.Server.Tunnel.PutRunId(ctl.serverCfg.NodeApiKey, tunnel.PostRunIdParams{
-			NodeId:   ctl.serverCfg.NodeId,
-			TunnelId: rsVerifyTunnel.Data.TunnelId,
-			RunId:    ctl.runID,
-		})
+		rsSubmitRunId, err = as.Server.Tunnel.PutRunId(
+			api.ServerConfig{
+				NodeId: ctl.serverCfg.Node.Id,
+				ApiKey: ctl.serverCfg.Node.ApiKey,
+			},
+			tunnel.PostRunIdParams{
+				TunnelId: rsVerifyTunnel.Data.TunnelId,
+				RunId:    ctl.runID,
+			},
+		)
 		if err != nil {
 			return
 		}

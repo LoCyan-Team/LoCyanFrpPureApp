@@ -3,16 +3,18 @@ package tunnel
 import (
 	"context"
 	"encoding/json"
-	_api "github.com/fatedier/frp/pkg/api/exec"
+
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/fatedier/frp/pkg/api"
+	_api "github.com/fatedier/frp/pkg/api/exec"
 )
 
 type PostRunIdParams struct {
-	NodeId   int64  `json:"node_id"`
 	TunnelId int64  `json:"tunnel_id"`
 	RunId    string `json:"run_id"`
 }
@@ -23,15 +25,14 @@ type PostRunIdResponse struct {
 	Data    struct{} `json:"data"`
 }
 
-func (s Service) PutRunId(apiKey string, params PostRunIdParams) (response *PostRunIdResponse, err error) {
+func (s Service) PutRunId(serverConfig api.ServerConfig, params PostRunIdParams) (response *PostRunIdResponse, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
 	body := &url.Values{}
-	body.Set("node_id", strconv.FormatInt(params.NodeId, 10))
 	body.Set("tunnel_id", strconv.FormatInt(params.TunnelId, 10))
 	body.Set("run_id", params.RunId)
-	rs, err := _api.Execute(ctx, "/server/tunnel/run-id", http.MethodPut, apiKey, nil, body)
+	rs, err := _api.ServerExecute(ctx, "/server/tunnel/run-id", http.MethodPut, serverConfig, nil, body)
 	if err != nil {
 		return nil, err
 	}

@@ -9,12 +9,13 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"strconv"
 
 	"github.com/fatedier/frp/pkg/api"
 	"github.com/fatedier/frp/pkg/util/log"
 )
 
-func ClientExecute(ctx context.Context, path string, method string, query interface{}, body *url.Values) (*http.Response, error) {
+func ServerExecute(ctx context.Context, path string, method string, cfg api.ServerConfig, query interface{}, body *url.Values) (*http.Response, error) {
 	var (
 		fullURL string
 		resp    *http.Response
@@ -31,7 +32,9 @@ func ClientExecute(ctx context.Context, path string, method string, query interf
 			return nil, err
 		}
 
-		req.Header.Set("User-Agent", api.UserAgents.Client)
+		req.Header.Set("User-Agent", api.UserAgents.Server)
+		req.Header.Set("X-Node-Id", strconv.FormatInt(cfg.NodeId, 10))
+		req.Header.Set("X-Api-Key", cfg.ApiKey)
 
 		switch method {
 		case http.MethodGet, http.MethodDelete:

@@ -3,10 +3,12 @@ package tunnel
 import (
 	"context"
 	"encoding/json"
-	_api "github.com/fatedier/frp/pkg/api/exec"
+
 	"io"
 	"net/http"
 	"time"
+
+	_api "github.com/fatedier/frp/pkg/api/exec"
 )
 
 type GetConfigParams struct {
@@ -26,7 +28,7 @@ func (s Service) GetConfig(params GetConfigParams) (response *GetConfigResponse,
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
-	rs, err := _api.Execute(ctx, "/client/tunnel/config", http.MethodGet, "", params, nil)
+	rs, err := _api.ClientExecute(ctx, "/client/tunnel/config", http.MethodGet, params, nil)
 	if err != nil {
 		return nil, err
 	}

@@ -3,16 +3,18 @@ package tunnel
 import (
 	"context"
 	"encoding/json"
-	_api "github.com/fatedier/frp/pkg/api/exec"
+
 	"io"
 	"net/http"
 	"net/url"
 	"strconv"
 	"time"
+
+	"github.com/fatedier/frp/pkg/api"
+	_api "github.com/fatedier/frp/pkg/api/exec"
 )
 
 type PostTunnelParams struct {
-	NodeId         int64    `json:"node_id"`
 	FrpToken       string   `json:"frp_token"`
 	TunnelName     string   `json:"tunnel_name"`
 	TunnelType     string   `json:"tunnel_type"`
@@ -32,12 +34,11 @@ type PostTunnelResponse struct {
 	} `json:"data"`
 }
 
-func (s Service) PostTunnel(apiKey string, params PostTunnelParams) (response *PostTunnelResponse, err error) {
+func (s Service) PostTunnel(serverConfig api.ServerConfig, params PostTunnelParams) (response *PostTunnelResponse, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second) // 设置超时
 	defer cancel()
 
 	body := &url.Values{}
-	body.Set("node_id", strconv.FormatInt(params.NodeId, 10))
 	body.Set("frp_token", params.FrpToken)
 	body.Set("tunnel_name", params.TunnelName)
 	body.Set("tunnel_type", params.TunnelType)
@@ -55,7 +56,7 @@ func (s Service) PostTunnel(apiKey string, params PostTunnelParams) (response *P
 	if params.SecretKey != nil {
 		body.Set("secret_key", *params.SecretKey)
 	}
-	rs, err := _api.Execute(ctx, "/server/tunnel", http.MethodPost, apiKey, nil, body)
+	rs, err := _api.ServerExecute(ctx, "/server/tunnel", http.MethodPost, serverConfig, nil, body)
 	if err != nil {
 		return nil, err
 	}
