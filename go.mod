@@ -14,7 +14,7 @@ require (
 	github.com/onsi/gomega v1.39.0
 	github.com/pelletier/go-toml/v2 v2.2.4
 	github.com/pion/stun/v2 v2.0.0
-	github.com/pires/go-proxyproto v0.8.1
+	github.com/pires/go-proxyproto v0.11.0
 	github.com/prometheus/client_golang v1.23.2
 	github.com/quic-go/quic-go v0.59.0
 	github.com/rodaine/table v1.3.0
